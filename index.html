@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script>
+  if(!sessionStorage.getItem('_reloaded')){
+    sessionStorage.setItem('_reloaded','1');
+    location.reload(true);
+  }
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar du Pickleball de Mauves</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7f3ee; min-height: 100vh; padding: 10px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 15px; }
+        h1 { color: #667eea; text-align: center; margin-bottom: 15px; }
+        h2 { margin-bottom: 15px; }
+        .top-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
+        .save-status { background: #27ae60; color: white; padding: 8px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; transition: all 0.3s ease; }
+        .save-status.saving { background: #f39c12; }
+        .save-status.error { background: #e74c3c; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; }
+        .tab { padding: 12px 16px; background: #667eea; border: none; border-radius: 8px; cursor: pointer; color: white; white-space: nowrap; flex-shrink: 0; font-size: 14px; }
+        .tab.active { background: #2ecc71; }
+        .section { display: none; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; }
+        button { background: #667eea; color: white; padding: 14px; border: none; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 8px; font-size: 16px; font-weight: 600; }
+        .btn-small { padding: 10px 14px; width: auto; }
+        .btn-success { background: #27ae60; }
+        .btn-danger { background: #e74c3c; }
+        .btn-print { background: #3498db; }
+        .btn-warning { background: #f39c12; }
+        .btn-info { background: #17a2b8; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #667eea; color: white; cursor: pointer; user-select: none; }
+        .sort-indicator { margin-left: 5px; font-size: 12px; }
+        .action-icons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+        .icon-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 8px; border-radius: 6px; }
+        .edit-btn { color: #f39c12; }
+        .delete-btn { color: #e74c3c; }
+        .cancel-btn { color: #95a5a6; }
+        /* Bouton valider mobile — vert, visible, tactile */
+        .validate-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+            width: auto;
+            margin: 0;
+            min-width: 48px;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+        .mobile-table { overflow-x: auto; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 15px 0; }
+        .summary-card { background: #667eea; color: white; padding: 15px; border-radius: 8px; text-align: center; }
+        .edit-input { width: 100%; padding: 8px; border: 2px solid #f39c12; border-radius: 4px; font-size: 16px; }
+        .edit-date { width: 100%; padding: 6px; border: 2px solid #f39c12; border-radius: 4px; font-size: 16px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        #visitorModal { z-index: 10000 !important; }
+        .modal-content { background: white; padding: 20px; border-radius: 10px; max-width: 400px; width: 90%; text-align: center; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
+        .stock-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; }
+        .stock-low { background: #fff3cd; border-color: #ffeaa7; }
+        .stock-out { background: #f8d7da; border-color: #f5c6cb; }
+        @media print { .no-print { display: none !important; } body { background: white !important; } .container { box-shadow: none !important; } }
+        :root { --bar-ink2:#3d3020; --bar-ylw:#d4890a; --bar-grn:#1e8c45; --bar-grn2:#145e2e; --bar-bdr:#d4c9b5; --bar-s0:#fff; --bar-s1:#f0ebe2; --bar-muted:#7a6a50; }
+        /* LOGIN SCREEN */
+        #loginScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:#3d3020; position:fixed; inset:0; z-index:9999; }
+        .login-box { background:#fff; border-radius:16px; padding:32px; width:100%; max-width:400px; box-shadow:0 8px 40px rgba(0,0,0,.4); }
+        .login-brand { font-family:'Oswald',sans-serif; font-size:26px; letter-spacing:2px; color:#d4890a; text-align:center; margin-bottom:4px; }
+        .login-sub { text-align:center; font-size:13px; color:#7a6a50; margin-bottom:24px; }
+        .login-form { display:flex; flex-direction:column; gap:12px; }
+        .login-form label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#7a6a50; margin-bottom:4px; }
+        .login-form input { width:100%; padding:10px 13px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; color:#1a1410; outline:none; box-sizing:border-box; }
+        .login-form input:focus { border-color:#1e8c45; }
+        .btn-login-main { width:100%; padding:12px; border:none; border-radius:8px; background:#1e8c45; color:#fff; font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:.8px; cursor:pointer; text-transform:uppercase; transition:background .15s; }
+        .btn-login-main:hover { background:#145e2e; }
+        .btn-google-bar { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:10px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; color:#1a1410; cursor:pointer; transition:background .15s; }
+        .btn-google-bar:hover { background:#e8e1d5; }
+        .login-divider { text-align:center; font-size:12px; color:#b0a090; position:relative; margin:2px 0; }
+        .login-divider::before, .login-divider::after { content:''; position:absolute; top:50%; width:42%; height:1px; background:#d4c9b5; }
+        .login-divider::before { left:0; } .login-divider::after { right:0; }
+        .btn-visitor-login { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px; border-radius:8px; border:1.5px solid #4a7090; background:linear-gradient(135deg,#1a2a40,#2a3d56); color:#7adcff; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; transition:all .2s; }
+        .btn-visitor-login:hover { border-color:#7adcff; }
+        #loginMsg { text-align:center; font-size:13px; min-height:18px; margin-bottom:10px; color:#e74c3c; }
+        /* NAV BAR */
+        .nav-bar { background:#3d3020; color:#fff; padding:0 16px; height:54px; display:none; align-items:center; gap:12px; position:sticky; top:0; z-index:200; box-shadow:0 3px 16px rgba(0,0,0,.3); }
+        .nav-brand { font-family:'Oswald',sans-serif; font-size:20px; letter-spacing:2px; color:#ffd080; flex-shrink:0; }
+        .nav-select-wrap { flex:1; max-width:260px; }
+        .nav-select { width:100%; padding:7px 30px 7px 12px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:#fff; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; cursor:pointer; outline:none; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
+        .nav-select option { background:#3d3020; color:#fff; }
+        .nav-user { font-size:12px; color:rgba(255,255,255,.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
+        .nav-r { margin-left:auto; display:flex; gap:8px; align-items:center; }
+        .nav-btn { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:#fff; padding:5px 12px; border-radius:6px; cursor:pointer; font-family:'Exo 2',sans-serif; font-size:12px; font-weight:600; transition:background .15s; white-space:nowrap; }
+        .nav-btn:hover { background:rgba(255,255,255,.22); }
+        /* Vendeur : cacher les options non-ventes dans le select */
+        .saisie-mode .nav-select option:not([value="ventes"]) { display:none !important; }
+        /* readonly : on bloque uniquement les boutons d'action de l'appli, pas la navigation ni la connexion */
+        .readonly-mode .section button { opacity:0.5; pointer-events:none; }
+        .readonly-mode .section input,
+        .readonly-mode .section select { opacity:0.5; pointer-events:none; }
+        /* Exceptions : les onglets restent cliquables en lecture seule */
+        .readonly-mode .tabs button { opacity:1 !important; pointer-events:auto !important; }
+        /* La top-bar, les modals et le loginPanel restent toujours actifs */
+        .top-bar button, .top-bar input { pointer-events:auto !important; opacity:1 !important; }
+        #loginPanel, #loginPanel * { pointer-events:auto !important; opacity:1 !important; }
+        .modal, .modal * { pointer-events:auto !important; opacity:1 !important; }
+        /* Vendeur : seul l'onglet Ventes est accessible */
+        .saisie-mode .nav-select option:not([value="ventes"]) { display:none !important; }
+        /* Budget */
+
+
+        /* LOGIN SCREEN */
+        #loginScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:#3d3020; position:fixed; inset:0; z-index:9999; }
+        .login-box { background:#fff; border-radius:16px; padding:32px; width:100%; max-width:400px; box-shadow:0 8px 40px rgba(0,0,0,.4); }
+        .login-brand { font-family:'Oswald',sans-serif; font-size:26px; letter-spacing:2px; color:#d4890a; text-align:center; margin-bottom:4px; }
+        .login-sub { text-align:center; font-size:13px; color:#7a6a50; margin-bottom:24px; }
+        .login-form { display:flex; flex-direction:column; gap:12px; }
+        .login-form label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#7a6a50; margin-bottom:4px; }
+        .login-form input { width:100%; padding:10px 13px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; color:#1a1410; outline:none; box-sizing:border-box; }
+        .login-form input:focus { border-color:#1e8c45; }
+        .btn-login-main { width:100%; padding:12px; border:none; border-radius:8px; background:#1e8c45; color:#fff; font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:.8px; cursor:pointer; text-transform:uppercase; transition:background .15s; }
+        .btn-login-main:hover { background:#145e2e; }
+        .btn-google-bar { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:10px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; color:#1a1410; cursor:pointer; transition:background .15s; }
+        .btn-google-bar:hover { background:#e8e1d5; }
+        .login-divider { text-align:center; font-size:12px; color:#b0a090; position:relative; margin:2px 0; }
+        .login-divider::before, .login-divider::after { content:''; position:absolute; top:50%; width:42%; height:1px; background:#d4c9b5; }
+        .login-divider::before { left:0; } .login-divider::after { right:0; }
+        .btn-visitor-login { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px; border-radius:8px; border:1.5px solid #4a7090; background:linear-gradient(135deg,#1a2a40,#2a3d56); color:#7adcff; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; transition:all .2s; }
+        .btn-visitor-login:hover { border-color:#7adcff; }
+        #loginMsg { text-align:center; font-size:13px; min-height:18px; margin-bottom:10px; }
+        /* NAV BAR */
+        .nav-bar { background:#3d3020; color:#fff; padding:0 16px; height:54px; align-items:center; gap:12px; position:sticky; top:0; z-index:200; box-shadow:0 3px 16px rgba(0,0,0,.3); }
+        .nav-brand { font-family:'Oswald',sans-serif; font-size:20px; letter-spacing:2px; color:#ffd080; flex-shrink:0; }
+        .nav-select-wrap { flex:1; max-width:260px; }
+        .nav-select { width:100%; padding:7px 30px 7px 12px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25); border-radius:8px; color:#fff; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; cursor:pointer; outline:none; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='%23fff' d='M5 7L0 0h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
+        .nav-select option { background:#3d3020; color:#fff; }
+        .nav-user { font-size:12px; color:rgba(255,255,255,.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
+        .nav-r { margin-left:auto; display:flex; gap:8px; align-items:center; }
+        .nav-btn { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:#fff; padding:5px 12px; border-radius:6px; cursor:pointer; font-family:'Exo 2',sans-serif; font-size:12px; font-weight:600; transition:background .15s; white-space:nowrap; }
+        .nav-btn:hover { background:rgba(255,255,255,.22); }
+        /* container style */
+        .container { background:#f7f3ee !important; box-shadow:none !important; border-radius:0 !important; padding:0 !important; }
+        .section { display:none; background:#fff; border-radius:10px; margin:16px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+        </style>
+</head>
+<body>
+<!-- Écran de connexion style Tournoi Pickleball -->
+<div id="loginScreen">
+    <div class="login-box">
+        <div class="login-brand">🍺 Bar Pickleball</div>
+        <div class="login-sub">Gestion de la buvette RSTH</div>
+        <div id="loginMsg"></div>
+        <div class="login-form">
+            <div>
+                <label>Email</label>
+                <input type="email" id="emailInput" placeholder="votre@email.com" onkeydown="if(event.key==='Enter') loginWithEmail()">
+            </div>
+            <div>
+                <label>Mot de passe</label>
+                <input type="password" id="passwordInput" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginWithEmail()">
+            </div>
+            <button class="btn-login-main" onclick="loginWithEmail()">→ Se connecter</button>
+            <div class="login-divider">ou</div>
+            <button class="btn-google-bar" onclick="loginWithGoogle()">
+                <i class="fab fa-google" style="color:#4285f4;font-size:16px;"></i> Connexion Google
+            </button>
+            <div class="login-divider">ou</div>
+            <!-- Formulaire visiteur inline dans le loginScreen -->
+            <div id="visitorForm" style="display:none;flex-direction:column;gap:10px;">
+                <input type="text" id="visitorCodeInput" placeholder="• • • • • •" maxlength="6"
+                    style="width:100%;padding:14px;border:2px solid #4a7090;border-radius:10px;font-size:28px;text-align:center;letter-spacing:10px;font-weight:700;background:#1a2a40;color:#7adcff;outline:none;box-sizing:border-box;"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                <div id="visitorCodeMsg2" style="font-size:13px;color:#e74c3c;min-height:16px;text-align:center;"></div>
+                <button onclick="validerCodeVisiteur()"
+                    style="width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,#1a2a40,#2a3d56);border:1.5px solid #4a7090;color:#7adcff;font-family:'Oswald',sans-serif;font-size:16px;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;transition:all .2s;">
+                    👁️ Accéder
+                </button>
+                <button onclick="cacherFormVisiteur()"
+                    style="width:100%;padding:11px;border:1.5px solid #b0a090;border-radius:10px;background:transparent;color:#b0a090;font-family:'Exo 2',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;">
+                    ✕ Annuler
+                </button>
+            </div>
+            <button class="btn-visitor-login" id="btnVisitorOpen" onclick="afficherFormVisiteur()">👁️ Accès Visiteur</button>
+        </div>
+    </div>
+</div>
+
+<!-- Nav Bar style Tournoi -->
+<div class="nav-bar no-print" id="navBar">
+    <div class="nav-brand">🍺 Bar Pickleball</div>
+    <div class="nav-select-wrap">
+        <select class="nav-select" id="navSelect" onchange="changerSection(this.value)">
+            <option value="ventes">🛒 Ventes</option>
+            <option value="offertes">🎁 Offertes</option>
+            <option value="stock">📦 Stock</option>
+            <option value="achats">🛍️ Achats</option>
+            <option value="boissons">🍺 Produits</option>
+            <option value="bilan">📊 Bilan</option>
+            <option value="apports">💰 Apports</option>
+            <option value="remboursements">💸 Remboursements</option>
+            <option value="utilisateurs" id="usersNavOption" style="display:none;">👥 Utilisateurs</option>
+        </select>
+    </div>
+    <span class="nav-user" id="userEmail"></span>
+    <div class="nav-r">
+        <button id="adminLoginBtn" class="nav-btn" onclick="afficherLogin()">🔐 Connexion</button>
+        <button id="logoutBtn" class="nav-btn" onclick="doLogout()" style="display:none;">🚪 Déco</button>
+    </div>
+</div>
+
+<div class="container" style="display:none;">
+    <div class="top-bar no-print" style="display:none;">
+        <button class="btn-small btn-success" onclick="sauvegarderDonnees()"><i class="fas fa-save"></i> Sauvegarder</button>
+        <button class="btn-small btn-print" onclick="imprimerDonnees()"><i class="fas fa-print"></i> Imprimer</button>
+        <button class="btn-small btn-info" onclick="exporterDonnees()"><i class="fas fa-file-export"></i> Exporter</button>
+        <button class="btn-small btn-warning" onclick="document.getElementById('importFile').click()"><i class="fas fa-file-import"></i> Importer</button>
+        <button class="btn-small btn-danger" onclick="demanderReset()"><i class="fas fa-redo"></i> Réinitialiser</button>
+        <span id="saveStatus" class="save-status">✓ Sauvegardé</span>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importerDonnees(event)">
+        <span id="loginPanelMsg" style="font-size:12px;color:#e74c3c;"></span>
+    </div>
+
+    <!-- Section Ventes -->
+    <div id="ventes" class="section" style="display:none;">
+        <h2>Enregistrer une vente</h2>
+        <div class="form-group"><label>Produit</label><select id="venteBoisson"></select></div>
+        <div class="form-group"><label>Quantité vendue</label><input type="number" id="venteQuantite" placeholder="Ex: 5" min="1"></div>
+        <div class="form-group"><label>Date</label><input type="date" id="venteDate"></div>
+        <button class="no-print" onclick="ajouterVente()"><i class="fas fa-plus"></i> Enregistrer la vente</button>
+        <h3>Historique des ventes</h3>
+        <div class="mobile-table">
+            <table id="tableVentes">
+                <thead><tr>
+                    <th onclick="trierVentes()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Produit</th><th>Qté</th><th>Prix Unitaire</th><th>Total</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
+                <tbody id="tbodyVentes"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section Consommations offertes -->
+    <div id="offertes" class="section" style="display:none;">
+        <h2>🎁 Consommations offertes</h2>
+        <div class="form-group"><label>Produit offert</label><select id="offertBoisson"></select></div>
+        <div class="form-group"><label>Quantité offerte</label><input type="number" id="offertQuantite" placeholder="Ex: 5" min="1"></div>
+        <div class="form-group"><label>Motif</label><input type="text" id="offertMotif" placeholder="Ex: Tournoi, Remerciement, Promotion"></div>
+        <div class="form-group"><label>Date</label><input type="date" id="offertDate"></div>
+        <button class="no-print btn-success" onclick="ajouterOffert()"><i class="fas fa-gift"></i> Enregistrer l'offre</button>
+        <h3>Historique des consommations offertes</h3>
+        <div class="mobile-table">
+            <table id="tableOfferts">
+                <thead><tr>
+                    <th onclick="trierOfferts()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Produit</th><th>Qté</th><th>Valeur (vente)</th><th>Coût (achat)</th><th>Motif</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
+                <tbody id="tbodyOfferts"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section Stock -->
+    <div id="stock" class="section" style="display:none;">
+        <h2>📦 État du Stock</h2>
+        <div class="summary-grid">
+            <div class="summary-card"><h3>Total Produits</h3><p id="totalBoissonsStock">0</p></div>
+            <div class="summary-card"><h3>En Stock</h3><p id="totalEnStock">0</p></div>
+            <div class="summary-card"><h3>Rupture</h3><p id="totalRupture">0</p></div>
+        </div>
+        <h3>Détail par produit</h3>
+        <div id="listeStock"></div>
+    </div>
+
+    <!-- Section Achats -->
+    <div id="achats" class="section" style="display:none;">
+        <h2>Enregistrer un achat</h2>
+        <div class="form-group"><label>Produit</label><select id="achatBoisson"></select></div>
+        <div class="form-group"><label>Quantité</label><input type="number" id="achatQuantite" placeholder="Ex: 24" min="1"></div>
+        <div class="form-group"><label>Prix d'achat unitaire (€)</label><input type="number" id="achatPrix" placeholder="Ex: 1.50" step="0.01"></div>
+        <div class="form-group"><label>Date</label><input type="date" id="achatDate"></div>
+        <button class="no-print" onclick="ajouterAchat()"><i class="fas fa-plus"></i> Enregistrer l'achat</button>
+        <h3>Historique des achats</h3>
+        <div class="mobile-table">
+            <table id="tableAchats">
+                <thead><tr>
+                    <th onclick="trierAchats()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Produit</th><th>Qté</th><th>Prix Unitaire</th><th>Total</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
+                <tbody id="tbodyAchats"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section Produits -->
+    <div id="boissons" class="section" style="display:none;">
+        <h2>📦 Gérer les produits</h2>
+        <div class="form-group"><label>Nom du produit</label><input type="text" id="boissonNom" placeholder="Ex: Bière blonde, Galette saucisse, Bonbons"></div>
+        <div class="form-group"><label>Type de produit</label>
+            <select id="boissonType">
+                <option value="boisson">Boisson</option>
+                <option value="nourriture">Nourriture</option>
+                <option value="autre">Autre</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Prix de vente (€)</label><input type="number" id="boissonPrix" placeholder="Ex: 3.50" step="0.01"></div>
+        <div class="form-group"><label>Unité de vente</label>
+            <select id="boissonUnite">
+                <option value="unite">Unité</option>
+                <option value="pack">Pack</option>
+                <option value="kg">Kilogramme</option>
+                <option value="portion">Portion</option>
+            </select>
+        </div>
+        <button class="no-print" onclick="ajouterBoisson()"><i class="fas fa-plus"></i> Ajouter le produit</button>
+        <h3>Liste des produits</h3>
+        <div class="mobile-table">
+            <table id="tableBoissons">
+                <thead><tr>
+                    <th>Produit</th><th>Type</th><th>Prix</th><th>Unité</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
+                <tbody id="tbodyBoissons"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section Bilan -->
+    <div id="bilan" class="section" style="display:none;">
+        <h2>📊 Bilan financier</h2>
+        <div class="summary-grid">
+            <div class="summary-card"><h3>Total Apports</h3><p id="totalApportsBilan">0.00 €</p></div>
+            <div class="summary-card"><h3>Total Dépenses</h3><p id="totalDepensesBilan">0.00 €</p></div>
+            <div class="summary-card"><h3>Total Recettes</h3><p id="totalRecettesBilan">0.00 €</p></div>
+            <div class="summary-card"><h3>Total Remboursements</h3><p id="totalRemboursementsBilan">0.00 €</p></div>
+            <div class="summary-card"><h3>Valeur Offres</h3><p id="totalOffertsValeurBilan">0.00 €</p><small style="font-size:10px;">au prix de vente</small></div>
+            <div class="summary-card"><h3>Coût des Ventes</h3><p id="coutVentesBilan">0.00 €</p><small style="font-size:10px;">coût d'achat des produits vendus</small></div>
+            <div class="summary-card"><h3>Coût des Offres</h3><p id="coutOffertsBilan">0.00 €</p><small style="font-size:10px;">coût d'achat des produits offerts</small></div>
+            <div class="summary-card"><h3>Bénéfice Net</h3><p id="beneficeBilan">0.00 €</p><small style="font-size:10px;">Recettes - (Coût des ventes + Coût des offres)</small></div>
+            <div class="summary-card"><h3>Solde Disponible</h3><p id="soldeDisponibleBilan">0.00 €</p><small style="font-size:10px;">Apports + Recettes - Dépenses - Remboursements</small></div>
+            <div class="summary-card"><h3>Vérification</h3><p id="verificationBilan">✓ OK</p><small style="font-size:10px;">Solde doit = Apports + (Recettes - Dépenses) - Remboursements</small></div>
+        </div>
+        <h3>Détails par contributeur</h3>
+        <div class="mobile-table">
+            <table id="tableContributeurs">
+                <thead><tr>
+                    <th>Contributeur</th><th>Total Apporté</th><th>Total Remboursé</th><th>Reste à Rembourser</th>
+                </tr></thead>
+                <tbody id="tbodyContributeurs"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section Apports -->
+    <div id="apports" class="section" style="display:none;">
+        <h2>Enregistrer un apport</h2>
+        <div class="form-group"><label>Nom du contributeur</label><input type="text" id="apportNom" placeholder="Ex: Jean Dupont"></div>
+        <div class="form-group"><label>Montant (€)</label><input type="number" id="apportMontant" placeholder="Ex: 100" step="0.01"></div>
+        <div class="form-group"><label>Date</label><input type="date" id="apportDate"></div>
+        <button class="no-print" onclick="ajouterApport()"><i class="fas fa-plus"></i> Ajouter l'apport</button>
+        <h3>Historique des apports</h3>
+        <div class="mobile-table">
+            <table id="tableApports">
+                <thead><tr>
+                    <th onclick="trierApports()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Nom</th><th>Montant</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
+                <tbody id="tbodyApports"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section Remboursements -->
+    <div id="remboursements" class="section" style="display:none;">
+        <h2>Rembourser un apport</h2>
+        <div class="form-group"><label>Contributeur</label><select id="remboursementContributeur"></select></div>
+        <div class="form-group"><label>Montant à rembourser (€)</label><input type="number" id="remboursementMontant" placeholder="Ex: 50" step="0.01"></div>
+        <button class="btn-success no-print" onclick="ajouterRemboursement()"><i class="fas fa-money-bill-wave"></i> Rembourser</button>
+        <h3>Historique des remboursements</h3>
+        <div class="mobile-table">
+            <table id="tableRemboursements">
+                <thead><tr>
+                    <th onclick="trierRemboursements()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Nom</th><th>Montant</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
+                <tbody id="tbodyRemboursements"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section Utilisateurs (admin only) -->
+    <div id="utilisateurs" class="section no-print" style="display:none;">
+        <h2>👥 Gestion des accès</h2>
+        <div style="background:#e8f4fd;border:1px solid #bee3f8;border-radius:10px;padding:16px;margin-bottom:20px;">
+            <h3 style="margin-bottom:10px;color:#2980b9;">👁️ Code d'accès visiteur</h3>
+            <p style="color:#555;font-size:13px;margin-bottom:12px;">Les visiteurs voient toutes les données sans pouvoir modifier.</p>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <div style="background:white;border:2px solid #bee3f8;border-radius:8px;padding:8px 20px;font-size:22px;font-weight:700;letter-spacing:4px;color:#2980b9;" id="currentVisitorCode">——</div>
+                <button onclick="regenererCode()" class="btn-info btn-small" style="white-space:nowrap;">🔄 Nouveau code</button>
+            </div>
+            <div id="visitorCodeMsg" style="margin-top:8px;font-size:12px;color:#27ae60;min-height:16px;"></div>
+        </div>
+        <p style="color:#888;margin-bottom:16px;font-size:14px;">Ajoutez des vendeurs autorisés (accès Ventes uniquement).</p>
+        <div style="background:#f8f9fa;border-radius:10px;padding:16px;margin-bottom:20px;border:1px solid #dee2e6;">
+            <h3 style="margin-bottom:12px;">➕ Ajouter un utilisateur</h3>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+                <div class="form-group" style="flex:1;min-width:150px;margin:0;"><label>Email</label><input id="newUserEmail" type="email" placeholder="prenom@email.com"></div>
+                <div class="form-group" style="flex:1;min-width:130px;margin:0;"><label>Mot de passe</label><input id="newUserPassword" type="password" placeholder="Min. 6 caractères"></div>
+                <div class="form-group" style="flex:1;min-width:120px;margin:0;"><label>Nom (optionnel)</label><input id="newUserName" type="text" placeholder="Jean Dupont"></div>
+                <button onclick="addUser()" class="btn-success" style="white-space:nowrap;">✅ Ajouter</button>
+            </div>
+            <div id="addUserMsg" style="margin-top:8px;font-size:13px;text-align:center;min-height:16px;"></div>
+        </div>
+        <h3 style="margin-bottom:12px;">📋 Utilisateurs autorisés</h3>
+        <div id="usersList"><p style="color:#888;text-align:center;padding:20px;">Chargement...</p></div>
+    </div>
+</div>
+
+<!-- Modal Visiteur -->
+<div id="visitorModal" class="modal no-print" style="z-index:10000;">
+    <div class="modal-content" style="max-width:320px;">
+        <h3>👁️ Accès Visiteur</h3>
+        <p style="color:#888;font-size:13px;margin:10px 0 16px;">Entrez le code fourni par l'administrateur.</p>
+        <input type="text" id="visitorCodeInput" placeholder="Code 6 chiffres" maxlength="6"
+            style="width:100%;padding:14px;border:2px solid #dee2e6;border-radius:8px;font-size:22px;text-align:center;letter-spacing:6px;font-weight:700;"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        <div id="visitorCodeMsg2" style="margin-top:8px;font-size:13px;color:#e74c3c;min-height:18px;text-align:center;"></div>
+        <div class="modal-buttons">
+            <button class="btn-info" onclick="validerCodeVisiteur()">👁️ Accéder</button>
+            <button class="btn-warning" onclick="fermerModalVisiteur()">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reset -->
+<div id="resetModal" class="modal no-print">
+    <div class="modal-content">
+        <h3>Confirmation</h3>
+        <p>Êtes-vous sûr de vouloir réinitialiser toutes les données ?</p>
+        <div class="modal-buttons">
+            <button class="btn-danger" onclick="reinitialiserDonnees()"><i class="fas fa-check"></i> Oui, Réinitialiser</button>
+            <button class="btn-warning" onclick="fermerModal()"><i class="fas fa-times"></i> Annuler</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCuOP-EwHzOo1p-WeNu0gQbWyv97kA6T5M",
+    authDomain: "pickleball-clean.firebaseapp.com",
+    databaseURL: "https://pickleball-clean-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "pickleball-clean",
+    storageBucket: "pickleball-clean.firebasestorage.app",
+    messagingSenderId: "1095429902544",
+    appId: "1:1095429902544:web:dc4aa9070a0d654f480ed5"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+let isAdmin = false, isSaisie = false, isVisitor = false, currentUser = null, secondaryApp = null, unsubscribeSnapshot = null;
+let data = { apports: [], boissons: [], achats: [], ventes: [], remboursements: [], offerts: [] };
+let visitorCode = null;
+let saveTimeout, isSaving = false;
+let triApports = 'desc', triAchats = 'desc', triVentes = 'desc', triRemboursements = 'desc', triOfferts = 'desc';
+
+// ===== SAUVEGARDE =====
+function mettreAJourStatutSauvegarde(statut) {
+    const el = document.getElementById('saveStatus');
+    if (el) { el.textContent = statut.message; el.className = `save-status ${statut.classe}`; }
+}
+function debounceSauvegarde() {
+    clearTimeout(saveTimeout);
+    mettreAJourStatutSauvegarde({ message: '⏳ Sauvegarde...', classe: 'saving' });
+    saveTimeout = setTimeout(() => sauvegarderDonnees(), 1000);
+}
+async function sauvegarderDonnees() {
+    if (isSaving || !db || (!isAdmin && !isSaisie)) return;
+    isSaving = true;
+    try {
+        trierDonneesParDate();
+        await setDoc(doc(db, "buvette", "data"), data);
+        mettreAJourStatutSauvegarde({ message: '✓ Sauvegardé', classe: '' });
+    } catch(e) {
+        mettreAJourStatutSauvegarde({ message: '❌ Erreur sauvegarde', classe: 'error' });
+        setTimeout(() => mettreAJourStatutSauvegarde({ message: '✓ Sauvegardé', classe: '' }), 3000);
+    } finally { isSaving = false; }
+}
+async function startRealtimeSync() {
+    if (!db) return;
+    if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+    try {
+        unsubscribeSnapshot = onSnapshot(doc(db, "buvette", "data"), (snap) => {
+            if (snap.exists()) {
+                data = { ...data, ...snap.data() };
+                afficherToutesLesDonnees();
+                mettreAJourSelects();
+                mettreAJourStatutSauvegarde({ message: '✓ Synchronisé', classe: '' });
+            }
+        }, (e) => console.error("Erreur sync:", e));
+    } catch(e) { console.error("Erreur sync:", e); }
+}
+function exporterDonnees() {
+    try {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `bar_backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url); alert('📤 Données exportées!');
+    } catch(e) { alert('❌ Erreur exportation'); }
+}
+function importerDonnees(event) {
+    const file = event.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            data = { ...data, ...JSON.parse(e.target.result) };
+            sauvegarderDonnees(); afficherToutesLesDonnees(); mettreAJourSelects();
+            alert('📥 Données importées avec succès!'); event.target.value = '';
+        } catch(e) { alert('❌ Erreur importation: fichier invalide'); }
+    };
+    reader.readAsText(file);
+}
+function demanderReset() { document.getElementById('resetModal').style.display = 'flex'; }
+function fermerModal() { document.getElementById('resetModal').style.display = 'none'; }
+function imprimerDonnees() { window.print(); }
+function getDateDuJour() { return new Date().toISOString().split('T')[0]; }
+function trierDonneesParDate() {
+    ['apports','achats','ventes','remboursements','offerts'].forEach(k =>
+        data[k].sort((a,b) => new Date(b.date) - new Date(a.date))
+    );
+}
+function mettreAJourIndicateursTri() {
+    [['tableApports',triApports],['tableAchats',triAchats],['tableVentes',triVentes],
+     ['tableRemboursements',triRemboursements],['tableOfferts',triOfferts]].forEach(([id, tri]) => {
+        document.querySelectorAll(`#${id} th .sort-indicator`).forEach(el => el.textContent = tri === 'desc' ? '▼' : '▲');
+    });
+}
+function reinitialiserDonnees() {
+    data = { apports: [], boissons: [], achats: [], ventes: [], remboursements: [], offerts: [] };
+    afficherToutesLesDonnees(); mettreAJourSelects(); fermerModal(); sauvegarderDonnees();
+    alert('🔄 Données réinitialisées !');
+}
+function getCoutAchatMoyen(boissonId) {
+    const achats = data.achats.filter(a => a.boissonId === boissonId);
+    if (!achats.length) return 0;
+    const qte = achats.reduce((s,a) => s + a.quantite, 0);
+    const cout = achats.reduce((s,a) => s + a.total, 0);
+    return qte > 0 ? cout / qte : 0;
+}
+
+// ===== UTILITAIRE : créer inputs d'édition mobiles =====
+// Chaque ligne éditable expose un bouton ✓ Valider explicite pour mobile
+function makeActionCell(type, id) {
+    return `<div class="action-icons">
+        <button class="icon-btn edit-btn" onclick="activerEdition${type}(${id})"><i class="fas fa-edit"></i></button>
+        <button class="icon-btn delete-btn" onclick="supprimer${type}(${id})"><i class="fas fa-trash"></i></button>
+        <button class="validate-btn" id="validate-${type}-${id}" onclick="sauvegarderModification${type}(${id})">✓</button>
+        <button class="icon-btn cancel-btn" id="cancel-${type}-${id}" onclick="annulerEdition${type}(${id})" style="display:none;"><i class="fas fa-times"></i></button>
+    </div>`;
+}
+function showEditMode(type, id, spanIds, inputIds) {
+    spanIds.forEach(s => document.getElementById(s) && (document.getElementById(s).style.display = 'none'));
+    inputIds.forEach(i => document.getElementById(i) && (document.getElementById(i).style.display = 'block'));
+    const vBtn = document.getElementById(`validate-${type}-${id}`);
+    const cBtn = document.getElementById(`cancel-${type}-${id}`);
+    if (vBtn) vBtn.style.display = 'inline-block';
+    if (cBtn) cBtn.style.display = 'inline-block';
+    if (inputIds[0]) { const el = document.getElementById(inputIds[0]); if(el) el.focus(); }
+}
+function hideEditMode(type, id, spanIds, inputIds) {
+    spanIds.forEach(s => document.getElementById(s) && (document.getElementById(s).style.display = 'block'));
+    inputIds.forEach(i => document.getElementById(i) && (document.getElementById(i).style.display = 'none'));
+    const vBtn = document.getElementById(`validate-${type}-${id}`);
+    const cBtn = document.getElementById(`cancel-${type}-${id}`);
+    if (vBtn) vBtn.style.display = 'none';
+    if (cBtn) cBtn.style.display = 'none';
+}
+
+// ===== PRODUITS =====
+function ajouterBoisson() {
+    const nom = document.getElementById('boissonNom').value.trim();
+    const type = document.getElementById('boissonType').value;
+    const prix = parseFloat(document.getElementById('boissonPrix').value);
+    const unite = document.getElementById('boissonUnite').value;
+    if (!nom || !prix || prix <= 0) { alert('❌ Veuillez remplir tous les champs'); return; }
+    data.boissons.push({ id: Date.now(), nom, type, prix, unite, dateAjout: new Date().toISOString() });
+    document.getElementById('boissonNom').value = ''; document.getElementById('boissonPrix').value = '';
+    afficherBoissons(); mettreAJourSelects(); debounceSauvegarde();
+}
+function afficherBoissons() {
+    const tbody = document.getElementById('tbodyBoissons'); tbody.innerHTML = '';
+    data.boissons.forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <span id="boisson-nom-${b.id}">${b.nom}</span>
+                <input type="text" id="edit-boisson-nom-${b.id}" class="edit-input" value="${b.nom}" style="display:none">
+            </td>
+            <td>
+                <span id="boisson-type-${b.id}">${b.type}</span>
+                <select id="edit-boisson-type-${b.id}" class="edit-input" style="display:none">
+                    <option value="boisson" ${b.type==='boisson'?'selected':''}>Boisson</option>
+                    <option value="nourriture" ${b.type==='nourriture'?'selected':''}>Nourriture</option>
+                    <option value="autre" ${b.type==='autre'?'selected':''}>Autre</option>
+                </select>
+            </td>
+            <td>
+                <span id="boisson-prix-${b.id}">${b.prix.toFixed(2)} €</span>
+                <input type="number" id="edit-boisson-prix-${b.id}" class="edit-input" value="${b.prix}" step="0.01" style="display:none">
+            </td>
+            <td>
+                <span id="boisson-unite-${b.id}">${b.unite}</span>
+                <select id="edit-boisson-unite-${b.id}" class="edit-input" style="display:none">
+                    <option value="unite" ${b.unite==='unite'?'selected':''}>Unité</option>
+                    <option value="pack" ${b.unite==='pack'?'selected':''}>Pack</option>
+                    <option value="kg" ${b.unite==='kg'?'selected':''}>Kilogramme</option>
+                    <option value="portion" ${b.unite==='portion'?'selected':''}>Portion</option>
+                </select>
+            </td>
+            <td class="no-print">${makeActionCell('Boisson', b.id)}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+function activerEditionBoisson(id) {
+    showEditMode('Boisson', id,
+        [`boisson-nom-${id}`,`boisson-type-${id}`,`boisson-prix-${id}`,`boisson-unite-${id}`],
+        [`edit-boisson-nom-${id}`,`edit-boisson-type-${id}`,`edit-boisson-prix-${id}`,`edit-boisson-unite-${id}`]);
+}
+function annulerEditionBoisson(id) {
+    hideEditMode('Boisson', id,
+        [`boisson-nom-${id}`,`boisson-type-${id}`,`boisson-prix-${id}`,`boisson-unite-${id}`],
+        [`edit-boisson-nom-${id}`,`edit-boisson-type-${id}`,`edit-boisson-prix-${id}`,`edit-boisson-unite-${id}`]);
+}
+function sauvegarderModificationBoisson(id) {
+    const nom = document.getElementById(`edit-boisson-nom-${id}`).value.trim();
+    const type = document.getElementById(`edit-boisson-type-${id}`).value;
+    const prix = parseFloat(document.getElementById(`edit-boisson-prix-${id}`).value);
+    const unite = document.getElementById(`edit-boisson-unite-${id}`).value;
+    if (!nom || !prix || prix <= 0) { alert('❌ Veuillez corriger les erreurs'); return; }
+    const b = data.boissons.find(x => x.id === id);
+    if (b) { b.nom = nom; b.type = type; b.prix = prix; b.unite = unite; }
+    afficherBoissons(); mettreAJourSelects(); debounceSauvegarde();
+}
+function supprimerBoisson(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+    data.boissons = data.boissons.filter(b => b.id !== id);
+    data.achats = data.achats.filter(a => a.boissonId !== id);
+    data.ventes = data.ventes.filter(v => v.boissonId !== id);
+    data.offerts = data.offerts.filter(o => o.boissonId !== id);
+    afficherBoissons(); afficherAchats(); afficherVentes(); afficherOfferts(); afficherStock();
+    mettreAJourSelects(); debounceSauvegarde(); alert('🗑️ Produit supprimé !');
+}
+
+// ===== STOCK =====
+function calculerStock() {
+    const stock = {};
+    data.boissons.forEach(b => { stock[b.id] = { nom:b.nom, type:b.type, unite:b.unite, prix:b.prix, achatTotal:0, venteTotal:0, offertTotal:0, stockRestant:0 }; });
+    data.achats.forEach(a => { if(stock[a.boissonId]) stock[a.boissonId].achatTotal += a.quantite; });
+    data.ventes.forEach(v => { if(stock[v.boissonId]) stock[v.boissonId].venteTotal += v.quantite; });
+    data.offerts.forEach(o => { if(stock[o.boissonId]) stock[o.boissonId].offertTotal += o.quantite; });
+    Object.keys(stock).forEach(id => { stock[id].stockRestant = stock[id].achatTotal - stock[id].venteTotal - stock[id].offertTotal; });
+    return stock;
+}
+function afficherStock() {
+    const stock = calculerStock(); const container = document.getElementById('listeStock'); container.innerHTML = '';
+    let tot=0, enStock=0, rupture=0;
+    Object.keys(stock).forEach(id => {
+        const item = stock[id]; tot++;
+        if (item.stockRestant > 0) enStock++; else rupture++;
+        const card = document.createElement('div');
+        card.className = 'stock-card' + (item.stockRestant <= 0 ? ' stock-out' : item.stockRestant <= 10 ? ' stock-low' : '');
+        card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;">
+            <div><h4 style="margin:0 0 5px 0;">${item.nom}</h4><p style="margin:0;color:#666;">Prix: ${item.prix.toFixed(2)} € / ${item.unite}</p></div>
+            <div style="text-align:right;">
+                <p style="margin:0;font-size:18px;font-weight:bold;color:${item.stockRestant<=0?'#e74c3c':item.stockRestant<=10?'#f39c12':'#27ae60'}">${item.stockRestant} ${item.unite}</p>
+                <p style="margin:0;font-size:12px;color:#666;">Acheté: ${item.achatTotal} | Vendu: ${item.venteTotal} | Offert: ${item.offertTotal}</p>
+            </div></div>`;
+        container.appendChild(card);
+    });
+    document.getElementById('totalBoissonsStock').textContent = tot;
+    document.getElementById('totalEnStock').textContent = enStock;
+    document.getElementById('totalRupture').textContent = rupture;
+}
+
+// ===== NAVIGATION =====
+function changerSection(sectionId) {
+    // Bloquer l'accès à utilisateurs pour les visiteurs
+    if(sectionId === 'utilisateurs' && !isAdmin) return;
+    // Cacher toutes les sections
+    document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+    // Afficher uniquement la section demandée
+    const cible = document.getElementById(sectionId);
+    if(cible) cible.style.display = 'block';
+    // Sync le select nav
+    const sel = document.getElementById('navSelect');
+    if(sel && sel.value !== sectionId) sel.value = sectionId;
+    // Rafraîchir le contenu
+    const map = {
+        stock: afficherStock, bilan: calculerBilan, ventes: afficherVentes,
+        achats: afficherAchats, boissons: afficherBoissons, apports: afficherApports,
+        remboursements: afficherRemboursements, offertes: afficherOfferts,
+        utilisateurs: () => { if(isAdmin) loadUsersList(); }
+    };
+    if(map[sectionId]) map[sectionId]();
+}
+function updateUsersTab() {
+    const opt = document.getElementById('usersNavOption');
+    if(opt) opt.style.display = isAdmin ? '' : 'none';
+}
+
+// ===== VENTES =====
+function ajouterVente() {
+    const boissonId = parseInt(document.getElementById('venteBoisson').value);
+    const quantite = parseInt(document.getElementById('venteQuantite').value);
+    const date = document.getElementById('venteDate').value;
+    if (!boissonId || !quantite || quantite <= 0 || !date) { alert('❌ Veuillez remplir tous les champs'); return; }
+    const b = data.boissons.find(x => x.id === boissonId);
+    if (!b) { alert('❌ Produit non trouvé'); return; }
+    data.ventes.push({ id: Date.now(), boissonId, boissonNom: b.nom, quantite, prixUnitaire: b.prix, total: quantite * b.prix, date });
+    trierDonneesParDate(); document.getElementById('venteQuantite').value = '';
+    afficherVentes(); debounceSauvegarde();
+}
+function afficherVentes() {
+    const tbody = document.getElementById('tbodyVentes'); tbody.innerHTML = '';
+    [...data.ventes].sort((a,b) => triVentes==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
+    .forEach(v => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <span id="vente-date-${v.id}">${new Date(v.date).toLocaleDateString('fr-FR')}</span>
+                <input type="date" id="edit-vente-date-${v.id}" class="edit-date" value="${v.date}" style="display:none">
+            </td>
+            <td>${v.boissonNom}</td>
+            <td>
+                <span id="vente-quantite-${v.id}">${v.quantite}</span>
+                <input type="number" id="edit-vente-quantite-${v.id}" class="edit-input" value="${v.quantite}" min="1" style="display:none">
+            </td>
+            <td>${v.prixUnitaire.toFixed(2)} €</td>
+            <td>${v.total.toFixed(2)} €</td>
+            <td class="no-print">${makeActionCell('Vente', v.id)}</td>`;
+        tbody.appendChild(tr);
+    });
+    mettreAJourIndicateursTri();
+}
+function activerEditionVente(id) {
+    showEditMode('Vente', id, [`vente-date-${id}`,`vente-quantite-${id}`], [`edit-vente-date-${id}`,`edit-vente-quantite-${id}`]);
+}
+function annulerEditionVente(id) {
+    hideEditMode('Vente', id, [`vente-date-${id}`,`vente-quantite-${id}`], [`edit-vente-date-${id}`,`edit-vente-quantite-${id}`]);
+}
+function sauvegarderModificationVente(id) {
+    const date = document.getElementById(`edit-vente-date-${id}`).value;
+    const quantite = parseInt(document.getElementById(`edit-vente-quantite-${id}`).value);
+    if (!date || !quantite || quantite <= 0) { alert('❌ Veuillez corriger les erreurs'); return; }
+    const v = data.ventes.find(x => x.id === id);
+    if (v) { v.date = date; v.quantite = quantite; v.total = quantite * v.prixUnitaire; }
+    trierDonneesParDate(); afficherVentes(); debounceSauvegarde();
+}
+function trierVentes() { triVentes = triVentes==='desc'?'asc':'desc'; afficherVentes(); }
+function supprimerVente(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette vente ?')) return;
+    data.ventes = data.ventes.filter(v => v.id !== id); afficherVentes(); debounceSauvegarde(); alert('🗑️ Vente supprimée !');
+}
+
+// ===== ACHATS =====
+function ajouterAchat() {
+    const boissonId = parseInt(document.getElementById('achatBoisson').value);
+    const quantite = parseInt(document.getElementById('achatQuantite').value);
+    const prix = parseFloat(document.getElementById('achatPrix').value);
+    const date = document.getElementById('achatDate').value;
+    if (!boissonId || !quantite || quantite<=0 || !prix || prix<=0 || !date) { alert('❌ Veuillez remplir tous les champs'); return; }
+    const b = data.boissons.find(x => x.id === boissonId);
+    data.achats.push({ id: Date.now(), boissonId, boissonNom: b.nom, quantite, prixUnitaire: prix, total: quantite*prix, date });
+    trierDonneesParDate();
+    document.getElementById('achatQuantite').value = ''; document.getElementById('achatPrix').value = '';
+    afficherAchats(); debounceSauvegarde();
+}
+function afficherAchats() {
+    const tbody = document.getElementById('tbodyAchats'); tbody.innerHTML = '';
+    [...data.achats].sort((a,b) => triAchats==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
+    .forEach(a => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <span id="achat-date-${a.id}">${new Date(a.date).toLocaleDateString('fr-FR')}</span>
+                <input type="date" id="edit-achat-date-${a.id}" class="edit-date" value="${a.date}" style="display:none">
+            </td>
+            <td>${a.boissonNom}</td>
+            <td>
+                <span id="achat-quantite-${a.id}">${a.quantite}</span>
+                <input type="number" id="edit-achat-quantite-${a.id}" class="edit-input" value="${a.quantite}" min="1" style="display:none">
+            </td>
+            <td>
+                <span id="achat-prix-${a.id}">${a.prixUnitaire.toFixed(2)} €</span>
+                <input type="number" id="edit-achat-prix-${a.id}" class="edit-input" value="${a.prixUnitaire}" step="0.01" style="display:none">
+            </td>
+            <td>${a.total.toFixed(2)} €</td>
+            <td class="no-print">${makeActionCell('Achat', a.id)}</td>`;
+        tbody.appendChild(tr);
+    });
+    mettreAJourIndicateursTri();
+}
+function activerEditionAchat(id) {
+    showEditMode('Achat', id,
+        [`achat-date-${id}`,`achat-quantite-${id}`,`achat-prix-${id}`],
+        [`edit-achat-date-${id}`,`edit-achat-quantite-${id}`,`edit-achat-prix-${id}`]);
+}
+function annulerEditionAchat(id) {
+    hideEditMode('Achat', id,
+        [`achat-date-${id}`,`achat-quantite-${id}`,`achat-prix-${id}`],
+        [`edit-achat-date-${id}`,`edit-achat-quantite-${id}`,`edit-achat-prix-${id}`]);
+}
+function sauvegarderModificationAchat(id) {
+    const date = document.getElementById(`edit-achat-date-${id}`).value;
+    const quantite = parseInt(document.getElementById(`edit-achat-quantite-${id}`).value);
+    const prix = parseFloat(document.getElementById(`edit-achat-prix-${id}`).value);
+    if (!date || !quantite || quantite<=0 || !prix || prix<=0) { alert('❌ Veuillez corriger les erreurs'); return; }
+    const a = data.achats.find(x => x.id === id);
+    if (a) { a.date = date; a.quantite = quantite; a.prixUnitaire = prix; a.total = quantite*prix; }
+    trierDonneesParDate(); afficherAchats(); debounceSauvegarde();
+}
+function trierAchats() { triAchats = triAchats==='desc'?'asc':'desc'; afficherAchats(); }
+function supprimerAchat(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet achat ?')) return;
+    data.achats = data.achats.filter(a => a.id !== id); afficherAchats(); debounceSauvegarde(); alert('🗑️ Achat supprimé !');
+}
+
+// ===== APPORTS =====
+function ajouterApport() {
+    const nom = document.getElementById('apportNom').value.trim();
+    const montant = parseFloat(document.getElementById('apportMontant').value);
+    const date = document.getElementById('apportDate').value;
+    if (!nom || !montant || montant<=0 || !date) { alert('❌ Veuillez remplir tous les champs'); return; }
+    data.apports.push({ id: Date.now(), nom, montant, date });
+    trierDonneesParDate();
+    document.getElementById('apportNom').value = ''; document.getElementById('apportMontant').value = '';
+    afficherApports(); mettreAJourSelects(); debounceSauvegarde();
+}
+function afficherApports() {
+    const tbody = document.getElementById('tbodyApports'); tbody.innerHTML = '';
+    [...data.apports].sort((a,b) => triApports==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
+    .forEach(a => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <span id="apport-date-${a.id}">${new Date(a.date).toLocaleDateString('fr-FR')}</span>
+                <input type="date" id="edit-apport-date-${a.id}" class="edit-date" value="${a.date}" style="display:none">
+            </td>
+            <td>
+                <span id="apport-nom-${a.id}">${a.nom}</span>
+                <input type="text" id="edit-apport-nom-${a.id}" class="edit-input" value="${a.nom}" style="display:none">
+            </td>
+            <td>
+                <span id="apport-montant-${a.id}">${a.montant.toFixed(2)} €</span>
+                <input type="number" id="edit-apport-montant-${a.id}" class="edit-input" value="${a.montant}" step="0.01" style="display:none">
+            </td>
+            <td class="no-print">${makeActionCell('Apport', a.id)}</td>`;
+        tbody.appendChild(tr);
+    });
+    mettreAJourIndicateursTri();
+}
+function activerEditionApport(id) {
+    showEditMode('Apport', id,
+        [`apport-date-${id}`,`apport-nom-${id}`,`apport-montant-${id}`],
+        [`edit-apport-date-${id}`,`edit-apport-nom-${id}`,`edit-apport-montant-${id}`]);
+}
+function annulerEditionApport(id) {
+    hideEditMode('Apport', id,
+        [`apport-date-${id}`,`apport-nom-${id}`,`apport-montant-${id}`],
+        [`edit-apport-date-${id}`,`edit-apport-nom-${id}`,`edit-apport-montant-${id}`]);
+}
+function sauvegarderModificationApport(id) {
+    const date = document.getElementById(`edit-apport-date-${id}`).value;
+    const nom = document.getElementById(`edit-apport-nom-${id}`).value.trim();
+    const montant = parseFloat(document.getElementById(`edit-apport-montant-${id}`).value);
+    if (!nom || !montant || montant<=0 || !date) { alert('❌ Veuillez corriger les erreurs'); return; }
+    const a = data.apports.find(x => x.id === id);
+    if (a) { a.date = date; a.nom = nom; a.montant = montant; }
+    trierDonneesParDate(); afficherApports(); mettreAJourSelects(); debounceSauvegarde();
+}
+function trierApports() { triApports = triApports==='desc'?'asc':'desc'; afficherApports(); }
+function supprimerApport(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet apport ?')) return;
+    data.apports = data.apports.filter(a => a.id !== id); afficherApports(); mettreAJourSelects(); debounceSauvegarde(); alert('🗑️ Apport supprimé !');
+}
+
+// ===== REMBOURSEMENTS =====
+function ajouterRemboursement() {
+    const nom = document.getElementById('remboursementContributeur').value;
+    const montant = parseFloat(document.getElementById('remboursementMontant').value);
+    if (!nom || !montant || montant<=0) { alert('❌ Veuillez remplir tous les champs'); return; }
+    data.remboursements.push({ id: Date.now(), contributeurNom: nom, montant, date: getDateDuJour() });
+    trierDonneesParDate(); document.getElementById('remboursementMontant').value = '';
+    afficherRemboursements(); debounceSauvegarde();
+}
+function afficherRemboursements() {
+    const tbody = document.getElementById('tbodyRemboursements'); tbody.innerHTML = '';
+    [...data.remboursements].sort((a,b) => triRemboursements==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
+    .forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <span id="remboursement-date-${r.id}">${new Date(r.date).toLocaleDateString('fr-FR')}</span>
+                <input type="date" id="edit-remboursement-date-${r.id}" class="edit-date" value="${r.date}" style="display:none">
+            </td>
+            <td>
+                <span id="remboursement-nom-${r.id}">${r.contributeurNom}</span>
+                <input type="text" id="edit-remboursement-nom-${r.id}" class="edit-input" value="${r.contributeurNom}" style="display:none">
+            </td>
+            <td>
+                <span id="remboursement-montant-${r.id}">${r.montant.toFixed(2)} €</span>
+                <input type="number" id="edit-remboursement-montant-${r.id}" class="edit-input" value="${r.montant}" step="0.01" style="display:none">
+            </td>
+            <td class="no-print">${makeActionCell('Remboursement', r.id)}</td>`;
+        tbody.appendChild(tr);
+    });
+    mettreAJourIndicateursTri();
+}
+function activerEditionRemboursement(id) {
+    showEditMode('Remboursement', id,
+        [`remboursement-date-${id}`,`remboursement-nom-${id}`,`remboursement-montant-${id}`],
+        [`edit-remboursement-date-${id}`,`edit-remboursement-nom-${id}`,`edit-remboursement-montant-${id}`]);
+}
+function annulerEditionRemboursement(id) {
+    hideEditMode('Remboursement', id,
+        [`remboursement-date-${id}`,`remboursement-nom-${id}`,`remboursement-montant-${id}`],
+        [`edit-remboursement-date-${id}`,`edit-remboursement-nom-${id}`,`edit-remboursement-montant-${id}`]);
+}
+function sauvegarderModificationRemboursement(id) {
+    const date = document.getElementById(`edit-remboursement-date-${id}`).value;
+    const nom = document.getElementById(`edit-remboursement-nom-${id}`).value.trim();
+    const montant = parseFloat(document.getElementById(`edit-remboursement-montant-${id}`).value);
+    if (!nom || !montant || montant<=0 || !date) { alert('❌ Veuillez corriger les erreurs'); return; }
+    const r = data.remboursements.find(x => x.id === id);
+    if (r) { r.date = date; r.contributeurNom = nom; r.montant = montant; }
+    trierDonneesParDate(); afficherRemboursements(); mettreAJourSelects(); debounceSauvegarde();
+}
+function trierRemboursements() { triRemboursements = triRemboursements==='desc'?'asc':'desc'; afficherRemboursements(); }
+function supprimerRemboursement(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce remboursement ?')) return;
+    data.remboursements = data.remboursements.filter(r => r.id !== id); afficherRemboursements(); mettreAJourSelects(); debounceSauvegarde(); alert('🗑️ Remboursement supprimé !');
+}
+
+// ===== OFFERTS =====
+function ajouterOffert() {
+    const boissonId = parseInt(document.getElementById('offertBoisson').value);
+    const quantite = parseInt(document.getElementById('offertQuantite').value);
+    const motif = document.getElementById('offertMotif').value.trim();
+    const date = document.getElementById('offertDate').value;
+    if (!boissonId || !quantite || quantite<=0 || !motif || !date) { alert('❌ Veuillez remplir tous les champs'); return; }
+    const b = data.boissons.find(x => x.id === boissonId);
+    if (!b) { alert('❌ Produit non trouvé'); return; }
+    data.offerts.push({ id: Date.now(), boissonId, boissonNom: b.nom, quantite, valeurVente: quantite*b.prix, motif, date });
+    trierDonneesParDate();
+    document.getElementById('offertQuantite').value = ''; document.getElementById('offertMotif').value = '';
+    afficherOfferts(); debounceSauvegarde();
+}
+function afficherOfferts() {
+    const tbody = document.getElementById('tbodyOfferts'); if (!tbody) return; tbody.innerHTML = '';
+    [...data.offerts].sort((a,b) => triOfferts==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
+    .forEach(o => {
+        const coutMoyen = getCoutAchatMoyen(o.boissonId);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <span id="offert-date-${o.id}">${new Date(o.date).toLocaleDateString('fr-FR')}</span>
+                <input type="date" id="edit-offert-date-${o.id}" class="edit-date" value="${o.date}" style="display:none">
+            </td>
+            <td>${o.boissonNom}</td>
+            <td>
+                <span id="offert-quantite-${o.id}">${o.quantite}</span>
+                <input type="number" id="edit-offert-quantite-${o.id}" class="edit-input" value="${o.quantite}" min="1" style="display:none">
+            </td>
+            <td>${o.valeurVente.toFixed(2)} €</td>
+            <td>${(o.quantite * coutMoyen).toFixed(2)} €</td>
+            <td>
+                <span id="offert-motif-${o.id}">${o.motif}</span>
+                <input type="text" id="edit-offert-motif-${o.id}" class="edit-input" value="${o.motif}" style="display:none">
+            </td>
+            <td class="no-print">${makeActionCell('Offert', o.id)}</td>`;
+        tbody.appendChild(tr);
+    });
+    mettreAJourIndicateursTri();
+}
+function activerEditionOffert(id) {
+    showEditMode('Offert', id,
+        [`offert-date-${id}`,`offert-quantite-${id}`,`offert-motif-${id}`],
+        [`edit-offert-date-${id}`,`edit-offert-quantite-${id}`,`edit-offert-motif-${id}`]);
+}
+function annulerEditionOffert(id) {
+    hideEditMode('Offert', id,
+        [`offert-date-${id}`,`offert-quantite-${id}`,`offert-motif-${id}`],
+        [`edit-offert-date-${id}`,`edit-offert-quantite-${id}`,`edit-offert-motif-${id}`]);
+}
+function sauvegarderModificationOffert(id) {
+    const date = document.getElementById(`edit-offert-date-${id}`).value;
+    const quantite = parseInt(document.getElementById(`edit-offert-quantite-${id}`).value);
+    const motif = document.getElementById(`edit-offert-motif-${id}`).value.trim();
+    if (!date || !quantite || quantite<=0 || !motif) { alert('❌ Veuillez corriger les erreurs'); return; }
+    const o = data.offerts.find(x => x.id === id);
+    if (o) { o.date = date; o.quantite = quantite; o.motif = motif; o.valeurVente = quantite * (data.boissons.find(b=>b.id===o.boissonId)?.prix || 0); }
+    trierDonneesParDate(); afficherOfferts(); debounceSauvegarde();
+}
+function trierOfferts() { triOfferts = triOfferts==='desc'?'asc':'desc'; afficherOfferts(); }
+function supprimerOffert(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette consommation offerte ?')) return;
+    data.offerts = data.offerts.filter(o => o.id !== id); afficherOfferts(); debounceSauvegarde(); alert('🗑️ Consommation offerte supprimée !');
+}
+
+// ===== BILAN =====
+function calculerBilan() {
+    const totalApports = data.apports.reduce((s,a) => s+a.montant, 0);
+    const totalDepenses = data.achats.reduce((s,a) => s+a.total, 0);
+    const totalRecettes = data.ventes.reduce((s,v) => s+v.total, 0);
+    const totalRemboursements = data.remboursements.reduce((s,r) => s+r.montant, 0);
+    let totalOffertsValeurVente=0, coutTotalVentes=0, coutTotalOfferts=0;
+    data.offerts.forEach(o => { totalOffertsValeurVente += o.valeurVente; coutTotalOfferts += o.quantite * getCoutAchatMoyen(o.boissonId); });
+    data.ventes.forEach(v => { coutTotalVentes += v.quantite * getCoutAchatMoyen(v.boissonId); });
+    const beneficeNet = totalRecettes - (coutTotalVentes + coutTotalOfferts);
+    const soldeDisponible = totalApports + totalRecettes - totalDepenses - totalRemboursements;
+    const difference = totalApports - totalDepenses - totalRemboursements + totalRecettes;
+    const verificationOK = Math.abs(soldeDisponible - difference) < 0.01;
+    document.getElementById('totalApportsBilan').textContent = totalApports.toFixed(2)+' €';
+    document.getElementById('totalDepensesBilan').textContent = totalDepenses.toFixed(2)+' €';
+    document.getElementById('totalRecettesBilan').textContent = totalRecettes.toFixed(2)+' €';
+    document.getElementById('totalRemboursementsBilan').textContent = totalRemboursements.toFixed(2)+' €';
+    document.getElementById('totalOffertsValeurBilan').textContent = totalOffertsValeurVente.toFixed(2)+' €';
+    document.getElementById('coutVentesBilan').textContent = coutTotalVentes.toFixed(2)+' €';
+    document.getElementById('coutOffertsBilan').textContent = coutTotalOfferts.toFixed(2)+' €';
+    document.getElementById('beneficeBilan').textContent = beneficeNet.toFixed(2)+' €';
+    document.getElementById('soldeDisponibleBilan').textContent = soldeDisponible.toFixed(2)+' €';
+    const vel = document.getElementById('verificationBilan');
+    vel.textContent = verificationOK ? '✓ OK' : '❌ Erreur';
+    vel.style.color = verificationOK ? '#27ae60' : '#e74c3c';
+    afficherDetailsContributeurs();
+}
+
+function afficherDetailsContributeurs() {
+    const tbody = document.getElementById('tbodyContributeurs'); tbody.innerHTML = '';
+    const contributeurs = {};
+    data.apports.forEach(a => { if(!contributeurs[a.nom]) contributeurs[a.nom]={totalApporte:0,totalRembourse:0}; contributeurs[a.nom].totalApporte+=a.montant; });
+    data.remboursements.forEach(r => { if(!contributeurs[r.contributeurNom]) contributeurs[r.contributeurNom]={totalApporte:0,totalRembourse:0}; contributeurs[r.contributeurNom].totalRembourse+=r.montant; });
+    Object.keys(contributeurs).forEach(nom => {
+        const c = contributeurs[nom];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${nom}</td><td>${c.totalApporte.toFixed(2)} €</td><td>${c.totalRembourse.toFixed(2)} €</td><td>${(c.totalApporte-c.totalRembourse).toFixed(2)} €</td>`;
+        tbody.appendChild(tr);
+    });
+}
+function mettreAJourSelects() {
+    ['achatBoisson','venteBoisson','offertBoisson'].forEach(id => {
+        const sel = document.getElementById(id); sel.innerHTML = '';
+        data.boissons.forEach(b => { const o = document.createElement('option'); o.value=b.id; o.textContent=`${b.nom} (${b.prix.toFixed(2)}€)`; sel.appendChild(o); });
+    });
+    const selR = document.getElementById('remboursementContributeur'); selR.innerHTML = '';
+    [...new Set(data.apports.map(a => a.nom))].forEach(nom => { selR.innerHTML += `<option value="${nom}">${nom}</option>`; });
+}
+function afficherToutesLesDonnees() {
+    afficherApports(); afficherBoissons(); afficherAchats(); afficherVentes();
+    afficherRemboursements(); afficherOfferts(); afficherStock(); calculerBilan(); mettreAJourIndicateursTri();
+}
+
+// ===== AUTH =====
+function toggleLoginPanel() {}
+function afficherLogin() {
+    const ls = document.getElementById('loginScreen');
+    const nb = document.getElementById('navBar');
+    const ct = document.querySelector('.container');
+    if(ls) ls.style.display = 'flex';
+    if(nb) nb.style.display = 'none';
+    if(ct) ct.style.display = 'none';
+    const msg = document.getElementById('loginMsg');
+    if(msg) msg.textContent = '';
+}
+function masquerLogin() {
+    const ls = document.getElementById('loginScreen');
+    const nb = document.getElementById('navBar');
+    const ct = document.querySelector('.container');
+    if(ls) ls.style.display = 'none';
+    if(nb) nb.style.display = 'flex';
+    if(ct) ct.style.display = 'block';
+}
+function showLogin() { afficherLogin(); }
+function showAuthMsg(msg, color) {
+    const el = document.getElementById('loginMsg');
+    if(el){ el.textContent = msg; el.style.color = color === 'red' ? '#c0281a' : '#1e8c45'; }
+}
+async function loginWithGoogle() {
+    try { await signInWithPopup(auth, provider); masquerLogin(); }
+    catch(e) {
+        const m = document.getElementById('loginMsg');
+        if(m) m.textContent = e.code==='auth/unauthorized-domain' ? '⚠️ Domaine non autorisé' : e.code==='auth/popup-closed-by-user' ? '⚠️ Connexion annulée' : '❌ '+e.message;
+    }
+}
+async function loginWithEmail() {
+    const email = (document.getElementById('emailInput')?.value || document.getElementById('loginEmail')?.value || '').trim();
+    const password = document.getElementById('passwordInput')?.value || document.getElementById('loginPassword')?.value || '';
+    const msg = document.getElementById('loginMsg');
+    if (!email || !password) { if(msg){ msg.style.color='#c0281a'; msg.textContent='Email et mot de passe requis'; } return; }
+    try {
+        if(msg){ msg.style.color='#888'; msg.textContent='Connexion...'; }
+        await signInWithEmailAndPassword(auth, email, password);
+        masquerLogin();
+    } catch(e) {
+        if(msg){ msg.style.color='#c0281a'; msg.textContent=(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')?'Mot de passe incorrect':e.code==='auth/user-not-found'?'Email inconnu':'Erreur: '+e.code; }
+    }
+}
+function getSecondaryApp() {
+    if (!secondaryApp) { try { secondaryApp = initializeApp(firebaseConfig, 'secondary'); } catch(e) {} }
+    return secondaryApp;
+}
+async function addUser() {
+    const email = document.getElementById('newUserEmail')?.value?.trim();
+    const password = document.getElementById('newUserPassword')?.value;
+    const name = document.getElementById('newUserName')?.value?.trim() || '';
+    const msgEl = document.getElementById('addUserMsg');
+    if (!email || !password) { if(msgEl) { msgEl.style.color='#e74c3c'; msgEl.textContent='⚠️ Email et mot de passe requis'; } return; }
+    if (password.length < 6) { if(msgEl) { msgEl.style.color='#e74c3c'; msgEl.textContent='⚠️ Minimum 6 caractères'; } return; }
+    if(msgEl) { msgEl.style.color='#888'; msgEl.textContent='⏳ Création...'; }
+    try {
+        const secAuth = getAuth(getSecondaryApp());
+        const result = await createUserWithEmailAndPassword(secAuth, email, password);
+        await signOut(secAuth);
+        await setDoc(doc(db, 'authorizedUsers', result.user.uid), { email, name, createdAt: new Date().toISOString(), createdBy: currentUser?.email||'admin', role: 'saisie' });
+        if(msgEl) { msgEl.style.color='#27ae60'; msgEl.textContent=`✅ ${email} ajouté !`; }
+        document.getElementById('newUserEmail').value=''; document.getElementById('newUserPassword').value=''; document.getElementById('newUserName').value='';
+        loadUsersList();
+    } catch(e) {
+        const m = e.code==='auth/email-already-in-use'?'⚠️ Email déjà utilisé':e.code==='auth/invalid-email'?'⚠️ Email invalide':'❌ '+e.message;
+        if(msgEl) { msgEl.style.color='#e74c3c'; msgEl.textContent=m; }
+    }
+}
+async function loadUsersList() {
+    const listEl = document.getElementById('usersList'); if (!listEl) return;
+    try {
+        const snap = await getDocs(collection(db, 'authorizedUsers'));
+        if (snap.empty) { listEl.innerHTML='<p style="color:#888;text-align:center;padding:20px;">Aucun utilisateur autorisé.</p>'; return; }
+        let html='<table style="width:100%;border-collapse:collapse;font-size:14px;"><thead><tr style="border-bottom:2px solid #dee2e6;"><th style="padding:8px;text-align:left;">Email</th><th style="padding:8px;text-align:left;">Nom</th><th style="padding:8px;text-align:left;">Ajouté le</th><th style="padding:8px;text-align:center;">Action</th></tr></thead><tbody>';
+        snap.forEach(d => {
+            const u=d.data(); const date=u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR'):'—';
+            html+=`<tr style="border-bottom:1px solid #dee2e6;"><td style="padding:8px;">${u.email}</td><td style="padding:8px;color:#888;">${u.name||'—'}</td><td style="padding:8px;color:#888;">${date}</td><td style="padding:8px;text-align:center;"><button onclick="removeUser('${d.id}','${u.email}')" style="padding:4px 10px;border-radius:6px;border:none;background:#e74c3c;color:#fff;cursor:pointer;font-size:12px;">🗑️ Retirer</button></td></tr>`;
+        });
+        html+='</tbody></table>'; listEl.innerHTML=html;
+    } catch(e) { listEl.innerHTML='<p style="color:#e74c3c;text-align:center;">Erreur de chargement</p>'; }
+}
+async function removeUser(uid, email) {
+    if (!confirm(`Retirer l'accès à ${email} ?`)) return;
+    try { await deleteDoc(doc(db, 'authorizedUsers', uid)); alert(`✅ ${email} retiré`); loadUsersList(); }
+    catch(e) { alert('❌ Erreur suppression'); }
+}
+async function updateUIForUser(user) {
+    const adminLoginBtn = document.getElementById('adminLoginBtn');
+    const logoutBtn     = document.getElementById('logoutBtn');
+    const visitorBtn    = document.getElementById('visitorLoginBtn');
+    const userEmailSpan = document.getElementById('userEmail');
+    const usersSection  = document.getElementById('utilisateurs');
+
+    if (user) {
+        // ── Utilisateur Firebase connecté ──────────────────────────────
+        currentUser = user; isVisitor = false;
+        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","checheux@gmail.com"];
+        isAdmin = adminEmails.includes(user.email);
+
+        if (isAdmin) {
+            isSaisie = false;
+            if(userEmailSpan) userEmailSpan.innerHTML = '<span style="background:#27ae60;color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">👑 Admin</span>';
+            if(logoutBtn)    logoutBtn.style.display    = 'inline-block';
+            if(adminLoginBtn) adminLoginBtn.style.display = 'none';
+            if(visitorBtn)   visitorBtn.style.display   = 'none';
+            if(usersSection) usersSection.style.display = 'block';
+            updateUsersTab();
+            document.body.classList.remove('readonly-mode','saisie-mode');
+            masquerLogin();
+            afficherToutesLesDonnees(); mettreAJourSelects();
+            changerSection('ventes');
+            startRealtimeSync();
+            chargerCodeVisiteur();
+        } else {
+            // Vérifier que l'utilisateur est dans authorizedUsers
+            try {
+                const snap = await getDoc(doc(db, 'authorizedUsers', user.uid));
+                if (snap.exists()) {
+                    isSaisie = true;
+                    if(userEmailSpan) userEmailSpan.innerHTML = '<span style="background:#3498db;color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">✏️ Vendeur</span>';
+                    if(logoutBtn)    logoutBtn.style.display    = 'inline-block';
+                    if(adminLoginBtn) adminLoginBtn.style.display = 'none';
+                    if(visitorBtn)   visitorBtn.style.display   = 'none';
+                    if(usersSection) usersSection.style.display = 'none';
+                    updateUsersTab();
+                    document.body.classList.remove('readonly-mode');
+                    document.body.classList.add('saisie-mode');
+                    masquerLogin();
+                    afficherToutesLesDonnees(); mettreAJourSelects();
+                    startRealtimeSync();
+                    changerSection('ventes');
+                } else {
+                    // Non autorisé : déconnexion immédiate
+                    await signOut(auth);
+                    showAuthMsg('Acces refuse. Contactez l administrateur.', 'red');
+                    afficherLogin();
+                }
+            } catch(e) {
+                await signOut(auth);
+                alert('Erreur de verification. Reessayez.');
+            }
+        }
+
+    } else if (isVisitor) {
+        // ── Mode visiteur (code valide) ────────────────────────────────
+        isAdmin = false; isSaisie = false;
+        if(userEmailSpan) userEmailSpan.innerHTML = '<span style="background:#17a2b8;color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">Visiteur</span>';
+        if(logoutBtn)    logoutBtn.style.display    = 'inline-block';
+        if(adminLoginBtn) adminLoginBtn.style.display = 'none';
+        if(visitorBtn)   visitorBtn.style.display   = 'none';
+        if(usersSection) usersSection.style.display = 'none';
+        const usersOpt = document.getElementById('usersNavOption');
+        if(usersOpt) usersOpt.style.display = 'none';
+        document.body.classList.add('readonly-mode');
+        document.body.classList.remove('saisie-mode');
+        masquerLogin();
+        afficherToutesLesDonnees(); mettreAJourSelects();
+        changerSection('ventes');
+        startRealtimeSync();
+
+    } else {
+        // ── Déconnecté → retour page accueil ───────────────────────────
+        currentUser = null; isAdmin = false; isSaisie = false; isVisitor = false;
+        if(logoutBtn)    logoutBtn.style.display    = 'none';
+        if(adminLoginBtn) adminLoginBtn.style.display = 'inline-block';
+        if(userEmailSpan) userEmailSpan.innerHTML   = '';
+        if(usersSection) usersSection.style.display = 'none';
+        document.body.classList.add('readonly-mode');
+        document.body.classList.remove('saisie-mode');
+        afficherLogin();
+    }
+}
+
+// ── Code visiteur ─────────────────────────────────────────────────────────
+async function chargerCodeVisiteur() {
+    try {
+        const snap = await getDoc(doc(db, 'barConfig', 'visiteurCode'));
+        if(snap.exists()) {
+            visitorCode = snap.data().code;
+            const el = document.getElementById('currentVisitorCode');
+            if(el) el.textContent = visitorCode;
+        } else {
+            await regenererCode();
+        }
+    } catch(e) { console.error('Erreur code visiteur:', e); }
+}
+async function regenererCode() {
+    if(!isAdmin) return;
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    try {
+        await setDoc(doc(db, 'barConfig', 'visiteurCode'), { code, updatedAt: new Date().toISOString() });
+        visitorCode = code;
+        const el = document.getElementById('currentVisitorCode');
+        if(el) el.textContent = code;
+        const msg = document.getElementById('visitorCodeMsg');
+        if(msg){ msg.textContent = 'Nouveau code genere !'; setTimeout(()=>{ msg.textContent=''; }, 3000); }
+    } catch(e) { alert('Erreur generation code'); }
+}
+function afficherFormVisiteur() {
+    const f = document.getElementById('visitorForm');
+    const b = document.getElementById('btnVisitorOpen');
+    if(f){ f.style.display='flex'; }
+    if(b){ b.style.display='none'; }
+    const inp = document.getElementById('visitorCodeInput');
+    if(inp){ inp.value=''; inp.focus(); }
+    const msg = document.getElementById('visitorCodeMsg2');
+    if(msg) msg.textContent='';
+}
+function cacherFormVisiteur() {
+    const f = document.getElementById('visitorForm');
+    const b = document.getElementById('btnVisitorOpen');
+    if(f){ f.style.display='none'; }
+    if(b){ b.style.display='flex'; }
+}
+// Legacy (modal visiteur externe - gardé pour compat)
+function ouvrirModalVisiteur() { afficherFormVisiteur(); }
+function fermerModalVisiteur() { cacherFormVisiteur(); }
+async function validerCodeVisiteur() {
+    const saisi = document.getElementById('visitorCodeInput').value.trim();
+    const msg   = document.getElementById('visitorCodeMsg2');
+    if(!saisi || saisi.length !== 6){ msg.textContent = 'Entrez un code a 6 chiffres'; return; }
+    msg.style.color = '#888'; msg.textContent = 'Verification...';
+    try {
+        const snap = await getDoc(doc(db, 'barConfig', 'visiteurCode'));
+        const bon  = snap.exists() ? snap.data().code : null;
+        if(saisi === bon){
+            isVisitor = true;
+            fermerModalVisiteur();
+            updateUIForUser(null);
+        } else {
+            msg.style.color = '#e74c3c'; msg.textContent = 'Code incorrect.';
+        }
+    } catch(e) { msg.style.color='#e74c3c'; msg.textContent='Erreur de connexion'; }
+}
+
+// ===== INIT =====
+function initialiser() {
+    const auj = getDateDuJour();
+    ['apportDate','achatDate','venteDate','offertDate'].forEach(id => { const el=document.getElementById(id); if(el) el.value=auj; });
+    window.addEventListener('beforeunload', () => { if (!isSaving) sauvegarderDonnees(); });
+    setInterval(() => { if (!isSaving && (isAdmin || isSaisie)) debounceSauvegarde(); }, 30000);
+    // Afficher la page de connexion par défaut
+    afficherLogin();
+}
+
+// Brancher Firebase Auth à la racine du module (pas dans initialiser)
+onAuthStateChanged(auth, async (user) => {
+    await updateUIForUser(user);
+});
+
+// Exposer tout en global
+Object.assign(window, {
+    toggleLoginPanel, loginWithGoogle, loginWithEmail, addUser, removeUser,
+    ouvrirModalVisiteur, fermerModalVisiteur, validerCodeVisiteur, regenererCode, afficherFormVisiteur, cacherFormVisiteur,
+    doLogout: async () => { if(isVisitor){ isVisitor=false; await updateUIForUser(null); } else { await signOut(auth); } },
+    sauvegarderDonnees, imprimerDonnees, exporterDonnees, importerDonnees,
+    demanderReset, fermerModal, reinitialiserDonnees, changerSection,
+    ajouterVente, supprimerVente, activerEditionVente, annulerEditionVente, sauvegarderModificationVente,
+    ajouterAchat, supprimerAchat, activerEditionAchat, annulerEditionAchat, sauvegarderModificationAchat,
+    ajouterApport, supprimerApport, activerEditionApport, annulerEditionApport, sauvegarderModificationApport,
+    ajouterRemboursement, supprimerRemboursement, activerEditionRemboursement, annulerEditionRemboursement, sauvegarderModificationRemboursement,
+    ajouterBoisson, supprimerBoisson, activerEditionBoisson, annulerEditionBoisson, sauvegarderModificationBoisson,
+    ajouterOffert, supprimerOffert, activerEditionOffert, annulerEditionOffert, sauvegarderModificationOffert,
+    trierVentes, trierAchats, trierApports, trierRemboursements, trierOfferts
+});
+
+document.addEventListener('DOMContentLoaded', initialiser);
+</script>
+</body>
+</html>
