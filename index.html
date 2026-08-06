@@ -605,7 +605,7 @@ async function reinitialiserDonnees() {
         alert('🔄 Budget "' + nom + '" archivé. Nouveau budget démarré !');
     } catch(e) {
         console.error(e);
-        alert('❌ Erreur lors de l\'archivage. Rien n\'a été réinitialisé.');
+        alert('❌ Erreur lors de l\'archivage. Rien n\'a été réinitialisé.\n\nDétail technique : ' + (e.code || '') + ' ' + (e.message || e));
     }
 }
 
