@@ -210,6 +210,7 @@
             <option value="achats">🛍️ Achats</option>
             <option value="boissons">🍺 Produits</option>
             <option value="bilan">📊 Bilan</option>
+            <option value="archives">🗄️ Archives</option>
             <option value="apports">💰 Apports</option>
             <option value="remboursements">💸 Remboursements</option>
             <option value="utilisateurs" id="usersNavOption" style="display:none;">👥 Utilisateurs</option>
@@ -367,6 +368,32 @@
         </div>
     </div>
 
+    <!-- Section Archives -->
+    <div id="archives" class="section" style="display:none;">
+        <h2>🗄️ Archives des budgets précédents</h2>
+        <p style="color:#666;font-size:13px;margin-bottom:12px;">Chaque fois que le bar est réinitialisé pour un nouveau budget, l'ancien est conservé ici avec son bilan complet.</p>
+        <div id="listeArchives"><p style="color:#999;">Chargement...</p></div>
+    </div>
+
+    <!-- Modal Détail Archive -->
+    <div id="archiveDetailModal" class="modal no-print">
+        <div class="modal-content" style="max-width:600px;max-height:85vh;overflow-y:auto;text-align:left;">
+            <h3 id="archiveDetailTitre" style="margin-bottom:12px;">Budget</h3>
+            <div class="summary-grid" id="archiveDetailGrid"></div>
+            <h4 style="margin:16px 0 8px;">Détails par contributeur</h4>
+            <div class="mobile-table">
+                <table>
+                    <thead><tr><th>Contributeur</th><th>Apporté</th><th>Remboursé</th><th>Reste</th></tr></thead>
+                    <tbody id="archiveDetailContributeurs"></tbody>
+                </table>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-info btn-small" style="width:auto;" onclick="exporterArchiveOuverte()"><i class="fas fa-file-export"></i> Exporter</button>
+                <button class="btn-warning btn-small" style="width:auto;" onclick="fermerArchiveDetailModal()"><i class="fas fa-times"></i> Fermer</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Section Apports -->
     <div id="apports" class="section" style="display:none;">
         <h2>Enregistrer un apport</h2>
@@ -452,11 +479,15 @@
 
 <!-- Modal Reset -->
 <div id="resetModal" class="modal no-print">
-    <div class="modal-content">
-        <h3>Confirmation</h3>
-        <p>Êtes-vous sûr de vouloir réinitialiser toutes les données ?</p>
+    <div class="modal-content" style="text-align:left;">
+        <h3 style="text-align:center;">Démarrer un nouveau budget</h3>
+        <p style="margin:12px 0;">Les données actuelles (apports, achats, ventes, remboursements, offerts) vont être <strong>archivées</strong> puis remises à zéro. La liste des produits est conservée.</p>
+        <div class="form-group">
+            <label>Nom de ce budget (pour le retrouver dans l'historique)</label>
+            <input type="text" id="resetArchiveNom" placeholder="Ex: Tournoi Été 2026">
+        </div>
         <div class="modal-buttons">
-            <button class="btn-danger" onclick="reinitialiserDonnees()"><i class="fas fa-check"></i> Oui, Réinitialiser</button>
+            <button class="btn-danger" onclick="reinitialiserDonnees()"><i class="fas fa-check"></i> Archiver et réinitialiser</button>
             <button class="btn-warning" onclick="fermerModal()"><i class="fas fa-times"></i> Annuler</button>
         </div>
     </div>
@@ -464,7 +495,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, deleteDoc, addDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -546,7 +577,11 @@ function importerDonnees(event) {
     };
     reader.readAsText(file);
 }
-function demanderReset() { document.getElementById('resetModal').style.display = 'flex'; }
+function demanderReset() {
+    const input = document.getElementById('resetArchiveNom');
+    if (input) input.value = 'Budget jusqu\'au ' + new Date().toLocaleDateString('fr-FR');
+    document.getElementById('resetModal').style.display = 'flex';
+}
 function fermerModal() { document.getElementById('resetModal').style.display = 'none'; }
 function imprimerDonnees() { window.print(); }
 function getDateDuJour() { return new Date().toISOString().split('T')[0]; }
@@ -561,10 +596,147 @@ function mettreAJourIndicateursTri() {
         document.querySelectorAll(`#${id} th .sort-indicator`).forEach(el => el.textContent = tri === 'desc' ? '▼' : '▲');
     });
 }
-function reinitialiserDonnees() {
-    data = { apports: [], boissons: [], achats: [], ventes: [], remboursements: [], offerts: [] };
-    afficherToutesLesDonnees(); mettreAJourSelects(); fermerModal(); sauvegarderDonnees();
-    alert('🔄 Données réinitialisées !');
+async function reinitialiserDonnees() {
+    if (!db || (!isAdmin && !isSaisie)) return;
+    const nomInput = document.getElementById('resetArchiveNom');
+    const nom = (nomInput && nomInput.value.trim()) || ('Budget jusqu\'au ' + new Date().toLocaleDateString('fr-FR'));
+    try {
+        // 1. Archiver les données actuelles (sans le catalogue produits, qui reste actif)
+        const archive = {
+            nom,
+            dateArchivage: new Date().toISOString(),
+            apports: data.apports, achats: data.achats, ventes: data.ventes,
+            remboursements: data.remboursements, offerts: data.offerts,
+            boissonsSnapshot: data.boissons // pour retrouver noms/prix de l'époque
+        };
+        await addDoc(collection(db, 'buvette_archives'), archive);
+        // 2. Réinitialiser les données actives (le catalogue produits est conservé)
+        data = { apports: [], boissons: data.boissons, achats: [], ventes: [], remboursements: [], offerts: [] };
+        afficherToutesLesDonnees(); mettreAJourSelects(); fermerModal();
+        await sauvegarderDonnees();
+        alert('🔄 Budget "' + nom + '" archivé. Nouveau budget démarré !');
+    } catch(e) {
+        console.error(e);
+        alert('❌ Erreur lors de l\'archivage. Rien n\'a été réinitialisé.');
+    }
+}
+
+// ===== ARCHIVES =====
+let archiveOuverteId = null;
+let archivesCache = [];
+function getCoutAchatMoyenDepuis(achats, boissonId) {
+    const filtres = achats.filter(a => a.boissonId === boissonId);
+    if (!filtres.length) return 0;
+    const qte = filtres.reduce((s,a) => s + a.quantite, 0);
+    const cout = filtres.reduce((s,a) => s + a.total, 0);
+    return qte > 0 ? cout / qte : 0;
+}
+function calculerBilanDepuis(d) {
+    const totalApports = d.apports.reduce((s,a) => s+a.montant, 0);
+    const totalDepenses = d.achats.reduce((s,a) => s+a.total, 0);
+    const totalRecettes = d.ventes.reduce((s,v) => s+v.total, 0);
+    const totalRemboursements = d.remboursements.reduce((s,r) => s+r.montant, 0);
+    let totalOffertsValeurVente=0, coutTotalVentes=0, coutTotalOfferts=0;
+    d.offerts.forEach(o => { totalOffertsValeurVente += o.valeurVente; coutTotalOfferts += o.quantite * getCoutAchatMoyenDepuis(d.achats, o.boissonId); });
+    d.ventes.forEach(v => { coutTotalVentes += v.quantite * getCoutAchatMoyenDepuis(d.achats, v.boissonId); });
+    const beneficeNet = totalRecettes - (coutTotalVentes + coutTotalOfferts);
+    const soldeDisponible = totalApports + totalRecettes - totalDepenses - totalRemboursements;
+    const contributeurs = {};
+    d.apports.forEach(a => { if(!contributeurs[a.nom]) contributeurs[a.nom]={totalApporte:0,totalRembourse:0}; contributeurs[a.nom].totalApporte+=a.montant; });
+    d.remboursements.forEach(r => { if(!contributeurs[r.contributeurNom]) contributeurs[r.contributeurNom]={totalApporte:0,totalRembourse:0}; contributeurs[r.contributeurNom].totalRembourse+=r.montant; });
+    return { totalApports, totalDepenses, totalRecettes, totalRemboursements, totalOffertsValeurVente, coutTotalVentes, coutTotalOfferts, beneficeNet, soldeDisponible, contributeurs };
+}
+async function chargerArchives() {
+    const container = document.getElementById('listeArchives');
+    if (!db) return;
+    container.innerHTML = '<p style="color:#999;">Chargement...</p>';
+    try {
+        const q = query(collection(db, 'buvette_archives'), orderBy('dateArchivage', 'desc'));
+        const snap = await getDocs(q);
+        archivesCache = [];
+        snap.forEach(docSnap => archivesCache.push({ id: docSnap.id, ...docSnap.data() }));
+        afficherListeArchives();
+    } catch(e) {
+        console.error(e);
+        container.innerHTML = '<p style="color:#e74c3c;">❌ Erreur de chargement des archives.</p>';
+    }
+}
+function afficherListeArchives() {
+    const container = document.getElementById('listeArchives');
+    container.innerHTML = '';
+    if (!archivesCache.length) {
+        container.innerHTML = '<p style="color:#999;">Aucun budget archivé pour le moment.</p>';
+        return;
+    }
+    archivesCache.forEach(a => {
+        const bilan = calculerBilanDepuis(a);
+        const dateAff = a.dateArchivage ? new Date(a.dateArchivage).toLocaleDateString('fr-FR') : '';
+        const card = document.createElement('div');
+        card.className = 'stock-card';
+        card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <div>
+                    <strong>${a.nom || 'Budget'}</strong><br>
+                    <small style="color:#666;">Archivé le ${dateAff}</small><br>
+                    <small style="color:${bilan.beneficeNet>=0?'#27ae60':'#e74c3c'};">Bénéfice net : ${bilan.beneficeNet.toFixed(2)} €</small>
+                </div>
+                <div class="action-icons no-print">
+                    <button class="icon-btn btn-small" style="background:#3498db;color:#fff;width:auto;" onclick="voirArchive('${a.id}')"><i class="fas fa-eye"></i> Voir</button>
+                    <button class="icon-btn btn-small" style="background:#17a2b8;color:#fff;width:auto;" onclick="exporterArchive('${a.id}')"><i class="fas fa-file-export"></i></button>
+                    ${isAdmin ? `<button class="icon-btn delete-btn btn-small" style="width:auto;" onclick="supprimerArchive('${a.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+            </div>`;
+        container.appendChild(card);
+    });
+}
+function voirArchive(id) {
+    const a = archivesCache.find(x => x.id === id);
+    if (!a) return;
+    archiveOuverteId = id;
+    const bilan = calculerBilanDepuis(a);
+    document.getElementById('archiveDetailTitre').textContent = '🗄️ ' + (a.nom || 'Budget');
+    document.getElementById('archiveDetailGrid').innerHTML = `
+        <div class="summary-card"><h3>Total Apports</h3><p>${bilan.totalApports.toFixed(2)} €</p></div>
+        <div class="summary-card"><h3>Total Dépenses</h3><p>${bilan.totalDepenses.toFixed(2)} €</p></div>
+        <div class="summary-card"><h3>Total Recettes</h3><p>${bilan.totalRecettes.toFixed(2)} €</p></div>
+        <div class="summary-card"><h3>Remboursements</h3><p>${bilan.totalRemboursements.toFixed(2)} €</p></div>
+        <div class="summary-card"><h3>Bénéfice Net</h3><p>${bilan.beneficeNet.toFixed(2)} €</p></div>
+        <div class="summary-card"><h3>Solde Disponible</h3><p>${bilan.soldeDisponible.toFixed(2)} €</p></div>`;
+    const tbody = document.getElementById('archiveDetailContributeurs');
+    tbody.innerHTML = '';
+    Object.keys(bilan.contributeurs).forEach(nom => {
+        const c = bilan.contributeurs[nom];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${nom}</td><td>${c.totalApporte.toFixed(2)} €</td><td>${c.totalRembourse.toFixed(2)} €</td><td>${(c.totalApporte-c.totalRembourse).toFixed(2)} €</td>`;
+        tbody.appendChild(tr);
+    });
+    document.getElementById('archiveDetailModal').style.display = 'flex';
+}
+function fermerArchiveDetailModal() {
+    document.getElementById('archiveDetailModal').style.display = 'none';
+    archiveOuverteId = null;
+}
+function exporterArchiveOuverte() { if (archiveOuverteId) exporterArchive(archiveOuverteId); }
+function exporterArchive(id) {
+    const a = archivesCache.find(x => x.id === id);
+    if (!a) return;
+    try {
+        const blob = new Blob([JSON.stringify(a, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const el = document.createElement('a');
+        el.href = url; el.download = `budget_${(a.nom || 'archive').replace(/[^a-z0-9]/gi,'_')}.json`;
+        document.body.appendChild(el); el.click(); document.body.removeChild(el);
+        URL.revokeObjectURL(url);
+    } catch(e) { alert('❌ Erreur exportation'); }
+}
+async function supprimerArchive(id) {
+    if (!isAdmin) return;
+    if (!confirm('Supprimer définitivement cette archive ? Cette action est irréversible.')) return;
+    try {
+        await deleteDoc(doc(db, 'buvette_archives', id));
+        archivesCache = archivesCache.filter(a => a.id !== id);
+        afficherListeArchives();
+    } catch(e) { alert('❌ Erreur lors de la suppression'); }
 }
 function getCoutAchatMoyen(boissonId) {
     const achats = data.achats.filter(a => a.boissonId === boissonId);
@@ -690,16 +862,21 @@ function calculerStock() {
 function afficherStock() {
     const stock = calculerStock(); const container = document.getElementById('listeStock'); container.innerHTML = '';
     let tot=0, enStock=0, rupture=0;
-    Object.keys(stock).forEach(id => {
+    // Trier par stock restant décroissant : les produits épuisés (<=0) se retrouvent naturellement en bas
+    const idsTries = Object.keys(stock).sort((idA, idB) => stock[idB].stockRestant - stock[idA].stockRestant);
+    idsTries.forEach(id => {
         const item = stock[id]; tot++;
         if (item.stockRestant > 0) enStock++; else rupture++;
         const card = document.createElement('div');
         card.className = 'stock-card' + (item.stockRestant <= 0 ? ' stock-out' : item.stockRestant <= 10 ? ' stock-low' : '');
-        card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;">
+        card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
             <div><h4 style="margin:0 0 5px 0;">${item.nom}</h4><p style="margin:0;color:#666;">Prix: ${item.prix.toFixed(2)} € / ${item.unite}</p></div>
-            <div style="text-align:right;">
-                <p style="margin:0;font-size:18px;font-weight:bold;color:${item.stockRestant<=0?'#e74c3c':item.stockRestant<=10?'#f39c12':'#27ae60'}">${item.stockRestant} ${item.unite}</p>
-                <p style="margin:0;font-size:12px;color:#666;">Acheté: ${item.achatTotal} | Vendu: ${item.venteTotal} | Offert: ${item.offertTotal}</p>
+            <div style="text-align:right;display:flex;align-items:center;gap:10px;">
+                <div>
+                    <p style="margin:0;font-size:18px;font-weight:bold;color:${item.stockRestant<=0?'#e74c3c':item.stockRestant<=10?'#f39c12':'#27ae60'}">${item.stockRestant} ${item.unite}</p>
+                    <p style="margin:0;font-size:12px;color:#666;">Acheté: ${item.achatTotal} | Vendu: ${item.venteTotal} | Offert: ${item.offertTotal}</p>
+                </div>
+                <button class="icon-btn delete-btn no-print" style="width:auto;font-size:20px;" title="Supprimer ce produit" onclick="supprimerBoisson(${id})"><i class="fas fa-trash"></i></button>
             </div></div>`;
         container.appendChild(card);
     });
@@ -725,6 +902,7 @@ function changerSection(sectionId) {
         stock: afficherStock, bilan: calculerBilan, ventes: afficherVentes,
         achats: afficherAchats, boissons: afficherBoissons, apports: afficherApports,
         remboursements: afficherRemboursements, offertes: afficherOfferts,
+        archives: chargerArchives,
         utilisateurs: () => { if(isAdmin) loadUsersList(); }
     };
     if(map[sectionId]) map[sectionId]();
@@ -1196,6 +1374,8 @@ async function updateUIForUser(user) {
             if(usersSection) usersSection.style.display = 'block';
             updateUsersTab();
             document.body.classList.remove('readonly-mode','saisie-mode');
+            const topBarAdmin = document.querySelector('.top-bar');
+            if(topBarAdmin) topBarAdmin.style.display = 'flex';
             masquerLogin();
             afficherToutesLesDonnees(); mettreAJourSelects();
             changerSection('ventes');
@@ -1215,6 +1395,8 @@ async function updateUIForUser(user) {
                     updateUsersTab();
                     document.body.classList.remove('readonly-mode');
                     document.body.classList.add('saisie-mode');
+                    const topBarSaisie = document.querySelector('.top-bar');
+                    if(topBarSaisie) topBarSaisie.style.display = 'none';
                     masquerLogin();
                     afficherToutesLesDonnees(); mettreAJourSelects();
                     startRealtimeSync();
@@ -1243,6 +1425,8 @@ async function updateUIForUser(user) {
         if(usersOpt) usersOpt.style.display = 'none';
         document.body.classList.add('readonly-mode');
         document.body.classList.remove('saisie-mode');
+        const topBarVisitor = document.querySelector('.top-bar');
+        if(topBarVisitor) topBarVisitor.style.display = 'none';
         masquerLogin();
         afficherToutesLesDonnees(); mettreAJourSelects();
         changerSection('ventes');
@@ -1351,7 +1535,8 @@ Object.assign(window, {
     ajouterRemboursement, supprimerRemboursement, activerEditionRemboursement, annulerEditionRemboursement, sauvegarderModificationRemboursement,
     ajouterBoisson, supprimerBoisson, activerEditionBoisson, annulerEditionBoisson, sauvegarderModificationBoisson,
     ajouterOffert, supprimerOffert, activerEditionOffert, annulerEditionOffert, sauvegarderModificationOffert,
-    trierVentes, trierAchats, trierApports, trierRemboursements, trierOfferts
+    trierVentes, trierAchats, trierApports, trierRemboursements, trierOfferts,
+    chargerArchives, voirArchive, fermerArchiveDetailModal, exporterArchive, exporterArchiveOuverte, supprimerArchive
 });
 
 document.addEventListener('DOMContentLoaded', initialiser);
