@@ -461,29 +461,13 @@
     </div>
 </div>
 
-<!-- Modal Visiteur -->
-<div id="visitorModal" class="modal no-print" style="z-index:10000;">
-    <div class="modal-content" style="max-width:320px;">
-        <h3>👁️ Accès Visiteur</h3>
-        <p style="color:#888;font-size:13px;margin:10px 0 16px;">Entrez le code fourni par l'administrateur.</p>
-        <input type="text" id="visitorCodeInput" placeholder="Code 6 chiffres" maxlength="6"
-            style="width:100%;padding:14px;border:2px solid #dee2e6;border-radius:8px;font-size:22px;text-align:center;letter-spacing:6px;font-weight:700;"
-            oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-        <div id="visitorCodeMsg2" style="margin-top:8px;font-size:13px;color:#e74c3c;min-height:18px;text-align:center;"></div>
-        <div class="modal-buttons">
-            <button class="btn-info" onclick="validerCodeVisiteur()">👁️ Accéder</button>
-            <button class="btn-warning" onclick="fermerModalVisiteur()">Annuler</button>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Reset -->
 <div id="resetModal" class="modal no-print">
     <div class="modal-content" style="text-align:left;">
         <h3 style="text-align:center;">Démarrer un nouveau budget</h3>
         <p style="margin:12px 0;">Les données actuelles (apports, achats, ventes, remboursements, offerts) vont être <strong>archivées</strong> puis remises à zéro. La liste des produits est conservée.</p>
         <div class="form-group">
-            <label>Nom de ce budget (pour le retrouver dans l'historique)</label>
+            <label for="resetArchiveNom">Nom de ce budget (pour le retrouver dans l'historique)</label>
             <input type="text" id="resetArchiveNom" placeholder="Ex: Tournoi Été 2026">
         </div>
         <div class="modal-buttons">
