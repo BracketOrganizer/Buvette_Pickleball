@@ -495,7 +495,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, deleteDoc, addDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -602,14 +602,18 @@ async function reinitialiserDonnees() {
     const nom = (nomInput && nomInput.value.trim()) || ('Budget jusqu\'au ' + new Date().toLocaleDateString('fr-FR'));
     try {
         // 1. Archiver les données actuelles (sans le catalogue produits, qui reste actif)
+        // Stocké comme document dans la collection "buvette" existante (déjà autorisée par les règles Firestore),
+        // avec un id préfixé "archive_" et un champ type pour le distinguer du document principal "data".
+        const archiveId = 'archive_' + Date.now();
         const archive = {
+            type: 'archive',
             nom,
             dateArchivage: new Date().toISOString(),
             apports: data.apports, achats: data.achats, ventes: data.ventes,
             remboursements: data.remboursements, offerts: data.offerts,
             boissonsSnapshot: data.boissons // pour retrouver noms/prix de l'époque
         };
-        await addDoc(collection(db, 'buvette_archives'), archive);
+        await setDoc(doc(db, 'buvette', archiveId), archive);
         // 2. Réinitialiser les données actives (le catalogue produits est conservé)
         data = { apports: [], boissons: data.boissons, achats: [], ventes: [], remboursements: [], offerts: [] };
         afficherToutesLesDonnees(); mettreAJourSelects(); fermerModal();
@@ -651,10 +655,13 @@ async function chargerArchives() {
     if (!db) return;
     container.innerHTML = '<p style="color:#999;">Chargement...</p>';
     try {
-        const q = query(collection(db, 'buvette_archives'), orderBy('dateArchivage', 'desc'));
-        const snap = await getDocs(q);
+        const snap = await getDocs(collection(db, 'buvette'));
         archivesCache = [];
-        snap.forEach(docSnap => archivesCache.push({ id: docSnap.id, ...docSnap.data() }));
+        snap.forEach(docSnap => {
+            const d = docSnap.data();
+            if (d && d.type === 'archive') archivesCache.push({ id: docSnap.id, ...d });
+        });
+        archivesCache.sort((a, b) => new Date(b.dateArchivage) - new Date(a.dateArchivage));
         afficherListeArchives();
     } catch(e) {
         console.error(e);
@@ -733,7 +740,7 @@ async function supprimerArchive(id) {
     if (!isAdmin) return;
     if (!confirm('Supprimer définitivement cette archive ? Cette action est irréversible.')) return;
     try {
-        await deleteDoc(doc(db, 'buvette_archives', id));
+        await deleteDoc(doc(db, 'buvette', id));
         archivesCache = archivesCache.filter(a => a.id !== id);
         afficherListeArchives();
     } catch(e) { alert('❌ Erreur lors de la suppression'); }
