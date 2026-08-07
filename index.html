@@ -164,6 +164,8 @@
         <div class="login-brand">🍺 Bar Pickleball</div>
         <div class="login-sub">Gestion de la buvette RSTH</div>
         <div id="loginMsg"></div>
+        <div id="debugLogBox" style="font-size:10px;color:#999;text-align:left;max-height:110px;overflow-y:auto;background:#f8f8f8;border-radius:6px;padding:6px;margin-bottom:8px;font-family:monospace;"></div>
+        <div style="text-align:right;margin:-6px 0 8px;"><a href="#" onclick="effacerDebugLog();return false;" style="font-size:10px;color:#aaa;">effacer le journal</a></div>
         <div class="login-form">
             <div>
                 <label>Email</label>
@@ -500,7 +502,6 @@ const firebaseConfig = {
   messagingSenderId: "138914322057",
   appId: "1:138914322057:web:8da44b10ae0abf472bd858"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -1290,11 +1291,37 @@ function showAuthMsg(msg, color) {
     const el = document.getElementById('loginMsg');
     if(el){ el.textContent = msg; el.style.color = color === 'red' ? '#c0281a' : '#1e8c45'; }
 }
+// ── Journal de diagnostic (visible sans outils développeur, survit au rechargement de la redirection Google) ──
+function debugLog(msg) {
+    try {
+        const entry = new Date().toLocaleTimeString('fr-FR') + ' — ' + msg;
+        let log = JSON.parse(sessionStorage.getItem('buvetteDebugLog') || '[]');
+        log.push(entry);
+        if (log.length > 25) log.shift();
+        sessionStorage.setItem('buvetteDebugLog', JSON.stringify(log));
+    } catch(e) {}
+    renderDebugLog();
+}
+function renderDebugLog() {
+    const el = document.getElementById('debugLogBox');
+    if (!el) return;
+    try {
+        const log = JSON.parse(sessionStorage.getItem('buvetteDebugLog') || '[]');
+        el.innerHTML = log.map(l => `<div>${l}</div>`).join('') || '<div style="color:#ccc;">(journal vide)</div>';
+        el.scrollTop = el.scrollHeight;
+    } catch(e) {}
+}
+function effacerDebugLog() { sessionStorage.removeItem('buvetteDebugLog'); renderDebugLog(); }
+renderDebugLog();
+debugLog('Page chargée : ' + location.href);
+
 async function loginWithGoogle() {
     const m = document.getElementById('loginMsg');
     if(m){ m.style.color='#888'; m.textContent='Redirection vers Google...'; }
+    debugLog('Clic Connexion Google → signInWithRedirect...');
     try { await signInWithRedirect(auth, provider); }
     catch(e) {
+        debugLog('signInWithRedirect ERREUR: ' + (e.code||e.message));
         if(m) m.textContent = e.code==='auth/unauthorized-domain' ? '⚠️ Domaine non autorisé' : '❌ '+e.message;
     }
 }
@@ -1315,6 +1342,19 @@ function getSecondaryApp() {
     if (!secondaryApp) { try { secondaryApp = initializeApp(firebaseConfig, 'secondary'); } catch(e) {} }
     return secondaryApp;
 }
+// Normalise une adresse email pour comparaison fiable : minuscules, et pour Gmail,
+// ignore les points et tout ce qui suit un "+" dans la partie locale (comme le fait Gmail lui-même).
+function normaliserEmail(email) {
+    let e = (email || '').trim().toLowerCase();
+    const parts = e.split('@');
+    if (parts.length !== 2) return e;
+    let [local, domain] = parts;
+    if (domain === 'gmail.com' || domain === 'googlemail.com') {
+        local = local.split('+')[0].replace(/\./g, '');
+        domain = 'gmail.com';
+    }
+    return local + '@' + domain;
+}
 async function addUser() {
     const email = document.getElementById('newUserEmail')?.value?.trim();
     const password = document.getElementById('newUserPassword')?.value;
@@ -1327,7 +1367,7 @@ async function addUser() {
         const secAuth = getAuth(getSecondaryApp());
         const result = await createUserWithEmailAndPassword(secAuth, email, password);
         await signOut(secAuth);
-        await setDoc(doc(db, 'authorizedUsers', result.user.uid), { email: email.toLowerCase(), name, createdAt: new Date().toISOString(), createdBy: currentUser?.email||'admin', role: 'saisie' });
+        await setDoc(doc(db, 'authorizedUsers', result.user.uid), { email: normaliserEmail(email), name, createdAt: new Date().toISOString(), createdBy: currentUser?.email||'admin', role: 'saisie' });
         if(msgEl) { msgEl.style.color='#27ae60'; msgEl.textContent=`✅ ${email} ajouté !`; }
         document.getElementById('newUserEmail').value=''; document.getElementById('newUserPassword').value=''; document.getElementById('newUserName').value='';
         loadUsersList();
@@ -1341,7 +1381,7 @@ async function addGoogleUser() {
     const name = document.getElementById('newGoogleUserName')?.value?.trim() || '';
     const msgEl = document.getElementById('addGoogleUserMsg');
     if (!emailRaw) { if(msgEl){ msgEl.style.color='#e74c3c'; msgEl.textContent='⚠️ Email requis'; } return; }
-    const email = emailRaw.toLowerCase();
+    const email = normaliserEmail(emailRaw);
     if(msgEl) { msgEl.style.color='#888'; msgEl.textContent='⏳ Ajout...'; }
     try {
         // Pas de compte Firebase Auth créé ici : on autorise juste cet email à se connecter
@@ -1385,9 +1425,10 @@ async function updateUIForUser(user) {
         // ── Utilisateur Firebase connecté ──────────────────────────────
         currentUser = user; isVisitor = false;
         const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","checheux@gmail.com"];
-        isAdmin = adminEmails.includes(user.email);
+        isAdmin = adminEmails.map(normaliserEmail).includes(normaliserEmail(user.email));
 
         if (isAdmin) {
+            debugLog('→ Reconnu comme ADMIN, affichage interface admin');
             isSaisie = false;
             if(userEmailSpan) userEmailSpan.innerHTML = '<span style="background:#27ae60;color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">👑 Admin</span>';
             if(logoutBtn)    logoutBtn.style.display    = 'inline-block';
@@ -1411,11 +1452,12 @@ async function updateUIForUser(user) {
                 if (snap.exists()) {
                     autorise = true;
                 } else if (user.email) {
-                    const q = query(collection(db, 'authorizedUsers'), where('email', '==', user.email.toLowerCase()));
+                    const q = query(collection(db, 'authorizedUsers'), where('email', '==', normaliserEmail(user.email)));
                     const qSnap = await getDocs(q);
                     if (!qSnap.empty) autorise = true;
                 }
                 if (autorise) {
+                    debugLog('→ Reconnu comme VENDEUR autorisé');
                     isSaisie = true;
                     if(userEmailSpan) userEmailSpan.innerHTML = '<span style="background:#3498db;color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">✏️ Vendeur</span>';
                     if(logoutBtn)    logoutBtn.style.display    = 'inline-block';
@@ -1433,13 +1475,15 @@ async function updateUIForUser(user) {
                     changerSection('ventes');
                 } else {
                     // Non autorisé : déconnexion immédiate
+                    debugLog('→ NON autorisé (ni admin, ni dans authorizedUsers) → déconnexion');
                     await signOut(auth);
                     showAuthMsg('Acces refuse. Contactez l administrateur.', 'red');
                     afficherLogin();
                 }
             } catch(e) {
+                debugLog('→ ERREUR pendant vérification authorizedUsers: ' + (e.code || e.message));
                 await signOut(auth);
-                alert('Erreur de verification. Reessayez.');
+                alert('Erreur de verification. Reessayez.\n\nDétail : ' + (e.code || e.message));
             }
         }
 
@@ -1464,6 +1508,7 @@ async function updateUIForUser(user) {
 
     } else {
         // ── Déconnecté → retour page accueil ───────────────────────────
+        debugLog('→ Branche "déconnecté" : affichage écran de connexion');
         currentUser = null; isAdmin = false; isSaisie = false; isVisitor = false;
         if(logoutBtn)    logoutBtn.style.display    = 'none';
         if(adminLoginBtn) adminLoginBtn.style.display = 'inline-block';
@@ -1549,11 +1594,15 @@ function initialiser() {
 
 // Brancher Firebase Auth à la racine du module (pas dans initialiser)
 onAuthStateChanged(auth, async (user) => {
+    debugLog('onAuthStateChanged: ' + (user ? user.email + ' (uid ' + user.uid + ')' : 'aucun utilisateur (null)'));
     await updateUIForUser(user);
 });
 
 // Capture le résultat d'une éventuelle redirection Google (login via signInWithRedirect)
-getRedirectResult(auth).catch((e) => {
+getRedirectResult(auth).then((result) => {
+    debugLog('getRedirectResult OK: ' + (result && result.user ? result.user.email : 'pas de redirection en cours'));
+}).catch((e) => {
+    debugLog('getRedirectResult ERREUR: ' + (e.code || e.message));
     console.error('Erreur retour redirection Google:', e);
     const m = document.getElementById('loginMsg');
     if (m) m.textContent = '❌ Connexion Google échouée : ' + (e.code || e.message);
@@ -1561,7 +1610,7 @@ getRedirectResult(auth).catch((e) => {
 
 // Exposer tout en global
 Object.assign(window, {
-    toggleLoginPanel, loginWithGoogle, loginWithEmail, addUser, addGoogleUser, removeUser,
+    toggleLoginPanel, loginWithGoogle, loginWithEmail, addUser, addGoogleUser, removeUser, effacerDebugLog,
     ouvrirModalVisiteur, fermerModalVisiteur, validerCodeVisiteur, regenererCode, afficherFormVisiteur, cacherFormVisiteur,
     doLogout: async () => { if(isVisitor){ isVisitor=false; await updateUIForUser(null); } else { await signOut(auth); } },
     sauvegarderDonnees, imprimerDonnees, exporterDonnees, importerDonnees,
