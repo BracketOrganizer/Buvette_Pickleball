@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <!-- Barcode Scanner avec une approche plus simple et fiable -->
+    <script src="https://unpkg.com/@zxing/browser@0.1.1/umd/index.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7f3ee; min-height: 100vh; padding: 10px; }
@@ -112,13 +114,12 @@
         #loginPanel, #loginPanel * { pointer-events:auto !important; opacity:1 !important; }
         .modal, .modal * { pointer-events:auto !important; opacity:1 !important; }
 
-        /* ===== SCANNER (style MesCourses) ===== */
+        /* ===== SCANNER ZXing ===== */
         .field-with-scan { display:flex; gap:8px; align-items:stretch; }
         .field-with-scan select, .field-with-scan input { flex:1; min-width:0; }
         .btn-scan { background:#17a2b8; color:#fff; border:none; border-radius:8px; width:auto; flex-shrink:0; padding:0 16px; font-size:18px; cursor:pointer; min-height:48px; touch-action:manipulation; }
         .btn-scan:active { background:#128293; }
 
-        /* Zone scanner - style MesCourses */
         #scan-modal .modal-content { max-width:440px; }
         #scan-zone {
             background:#1a1a18;
@@ -135,57 +136,6 @@
             height:100% !important;
             object-fit:cover;
         }
-        #scan-zone .scan-overlay {
-            position:absolute;
-            inset:0;
-            pointer-events:none;
-            z-index:10;
-        }
-        #scan-zone .scan-overlay__mask {
-            position:absolute;
-            background:rgba(0,0,0,0.55);
-        }
-        #scan-zone .scan-overlay__region {
-            position:absolute;
-            width:var(--scan-w);
-            height:var(--scan-h);
-            left:var(--scan-x);
-            top:var(--scan-y);
-        }
-        #scan-zone .scan-overlay__bracket {
-            position:absolute;
-            width:24px;
-            height:24px;
-            border-color:#00ff88;
-            border-style:solid;
-            border-width:0;
-        }
-        #scan-zone .scan-overlay__bracket--tl { top:-1px; left:-1px; border-top-width:3px; border-left-width:3px; border-top-left-radius:4px; }
-        #scan-zone .scan-overlay__bracket--tr { top:-1px; right:-1px; border-top-width:3px; border-right-width:3px; border-top-right-radius:4px; }
-        #scan-zone .scan-overlay__bracket--bl { bottom:-1px; left:-1px; border-bottom-width:3px; border-left-width:3px; border-bottom-left-radius:4px; }
-        #scan-zone .scan-overlay__bracket--br { bottom:-1px; right:-1px; border-bottom-width:3px; border-right-width:3px; border-bottom-right-radius:4px; }
-        #scan-zone .scan-overlay__line {
-            position:absolute;
-            left:10%;
-            top:0;
-            width:80%;
-            height:calc(100% - 2px);
-            animation:scan-sweep 2.5s ease-in-out infinite;
-        }
-        #scan-zone .scan-overlay__line::before {
-            content:'';
-            display:block;
-            width:100%;
-            height:2px;
-            background:#00ff88;
-            box-shadow:0 0 8px #00ff88;
-            border-radius:1px;
-        }
-        @keyframes scan-sweep {
-            0%, 100% { transform:translateY(0); }
-            50% { transform:translateY(100%); }
-        }
-
         #scan-status { font-size:13px; color:#888; min-height:18px; margin-top:10px; text-align:center; }
         #scan-result-card { display:none; margin-top:1rem; border-top:1px dashed #d4c9b5; padding-top:1rem; text-align:left; }
         #scan-result-card .scan-r-row { display:flex; gap:.8rem; margin-bottom:.7rem; align-items:center; }
@@ -251,7 +201,6 @@
             #utilisateurs .form-group { min-width:100% !important; }
             #utilisateurs > div > div[style*="align-items:flex-end"] { align-items:stretch !important; }
         }
-        /* Scrollbar */
         ::-webkit-scrollbar{width:4px}
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:#d4c9b5;border-radius:4px}
@@ -600,7 +549,7 @@
     </div>
 </div>
 
-<!-- Modal Scanner (style MesCourses) -->
+<!-- Modal Scanner (ZXing) -->
 <div id="scan-modal" class="modal no-print">
     <div class="modal-content" style="max-width:440px;text-align:center;">
         <h3 style="text-align:center;">📷 Scanner un code-barre</h3>
@@ -608,8 +557,7 @@
         <p id="scan-status" style="font-size:13px;color:#888;min-height:18px;margin-top:10px;"></p>
 
         <div style="display:flex;gap:.5rem;margin-top:.8rem;flex-wrap:wrap;">
-            <button class="btn btn-primary btn-full" id="scan-start-btn" style="padding:.7rem;flex:2;min-width:120px;">Démarrer la caméra</button>
-            <button class="btn btn-outline btn-icon" id="scan-torch-btn" style="display:none;flex:none;min-width:48px;" title="Torche">💡</button>
+            <button class="btn btn-primary btn-full" id="scan-start-btn" style="padding:.7rem;flex:2;min-width:120px;">📷 Démarrer</button>
             <button class="btn btn-outline btn-sm" id="scan-stop-btn" style="flex:none;min-width:60px;">Arrêter</button>
         </div>
 
@@ -625,12 +573,13 @@
                 </div>
             </div>
             <div class="frow" style="margin-bottom:.7rem;">
-                <select id="scan-r-cat" style="flex:1;"></select>
+                <select id="scan-r-cat" style="flex:1;">
+                    <option value="boisson">🍺 Boisson</option>
+                    <option value="nourriture">🍔 Nourriture</option>
+                    <option value="autre">📦 Autre</option>
+                </select>
             </div>
             <div class="frow" style="margin-bottom:.7rem;">
-                <select id="scan-r-magasin" style="flex:1;">
-                    <option value="">Sans magasin</option>
-                </select>
                 <input type="number" step="0.01" min="0" id="scan-r-prix" placeholder="Prix (€)" style="flex:1;">
                 <select id="scan-r-uniteprix" style="flex:none;width:auto;min-width:80px;">
                     <option value="unite">Unité</option>
@@ -1078,16 +1027,18 @@ function afficherStock() {
     document.getElementById('totalRupture').textContent = rupture;
 }
 
-// ===== SCANNER (version MesCourses) =====
-let scanner = null;
-let scanProcessing = false;
+// ===== SCANNER avec ZXing =====
 let scanMode = null; // 'achat' ou 'boisson'
-let scanLastProduct = null; // pour stockage temporaire avant ajout
+let scanProcessing = false;
+let scanLastProduct = null;
+let codeReader = null;
+let videoInputDevices = [];
+let selectedDeviceId = null;
+let stream = null;
 
 const scanZoneEl = document.getElementById('scan-zone');
 const scanStartBtn = document.getElementById('scan-start-btn');
 const scanStopBtn = document.getElementById('scan-stop-btn');
-const scanTorchBtn = document.getElementById('scan-torch-btn');
 const scanStatusEl = document.getElementById('scan-status');
 const scanResultCard = document.getElementById('scan-result-card');
 
@@ -1096,101 +1047,101 @@ function scanSetStatus(msg, isError){
     scanStatusEl.style.color = isError ? '#c0392b' : '#888';
 }
 
-function resetScanButtons(){
-    scanStartBtn.textContent = 'Démarrer la caméra';
-    scanStartBtn.classList.remove('btn-danger');
-    scanTorchBtn.style.display = 'none';
+function resetScanUI(){
+    scanStartBtn.textContent = '📷 Démarrer';
     scanZoneEl.style.display = 'none';
     scanZoneEl.innerHTML = '';
-}
-
-function stopScanCamera(){
-    if (scanner && scanner.isRunning) {
-        try { scanner.stop(); } catch(e) {}
+    if (stream) {
+        try { stream.getTracks().forEach(t => t.stop()); } catch(e) {}
+        stream = null;
     }
-    scanner = null;
-    resetScanButtons();
+    if (codeReader) {
+        try { codeReader.reset(); } catch(e) {}
+        codeReader = null;
+    }
 }
 
 async function startScanCamera(){
-    if (scanner && scanner.isRunning) return;
+    if (codeReader) {
+        // Si déjà en cours, on réinitialise
+        resetScanUI();
+        await new Promise(r => setTimeout(r, 300));
+    }
 
-    // Vérifier que la bibliothèque WebWasmBarcodeReader est disponible
-    if (typeof WebWasmBarcodeReader === 'undefined') {
-        scanSetStatus('⚠️ Le moteur de scan n\'est pas chargé. Rechargez la page.', true);
+    // Vérifier que ZXing est disponible
+    if (typeof ZXing === 'undefined') {
+        scanSetStatus('⚠️ Bibliothèque de scan non chargée. Rechargez la page.', true);
         return;
     }
 
-    scanSetStatus('Ouverture de la caméra…');
+    scanSetStatus('Accès à la caméra…');
     scanZoneEl.style.display = 'block';
     scanZoneEl.innerHTML = '';
-    // Ajuster la hauteur en fonction de la largeur pour respecter le ratio 4:3
     const rect = scanZoneEl.getBoundingClientRect();
     scanZoneEl.style.height = Math.round(rect.width * 0.75) + 'px';
     await new Promise(r => requestAnimationFrame(r));
 
-    let startupFailed = false, startupErrorMsg = '';
-
     try {
-        scanner = new WebWasmBarcodeReader.BarcodeScanner({
-            container: scanZoneEl,
-            beepOnDetect: true,
-            facingMode: 'environment',
-            scanRegion: { width: 0.88, height: 0.34 },
-            resolutionScale: 2.2,
-            onDetect: (result) => {
-                if (result && result.data) onScanDetected(result.data);
-            },
-            onError: (err) => {
-                console.error('Erreur scanner:', err);
-                startupFailed = true;
-                startupErrorMsg = err ? err.message : String(err);
-                resetScanButtons();
+        // Lire les périphériques vidéo
+        videoInputDevices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+        if (!videoInputDevices.length) {
+            scanSetStatus('❌ Aucune caméra trouvée', true);
+            resetScanUI();
+            return;
+        }
+        // Choisir la caméra arrière si disponible
+        const backCam = videoInputDevices.find(d => d.label && d.label.toLowerCase().includes('back'));
+        selectedDeviceId = backCam ? backCam.deviceId : videoInputDevices[0].deviceId;
+
+        codeReader = new ZXing.BrowserMultiFormatReader();
+        codeReader.timeBetweenScansMillis = 300;
+
+        // Démarrer le décodage
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: selectedDeviceId, facingMode: 'environment' },
+            audio: false
+        });
+
+        // Attacher le stream à un élément vidéo
+        const videoEl = document.createElement('video');
+        videoEl.srcObject = stream;
+        videoEl.setAttribute('playsinline', 'true');
+        videoEl.setAttribute('autoplay', 'true');
+        videoEl.style.width = '100%';
+        videoEl.style.height = '100%';
+        videoEl.style.objectFit = 'cover';
+        scanZoneEl.appendChild(videoEl);
+
+        await videoEl.play();
+
+        scanStartBtn.textContent = '📷 Scannage…';
+        scanSetStatus('🔍 Visez le code-barres…');
+
+        // Démarrer le décodage
+        codeReader.decodeFromVideoElement(videoEl, (result, err) => {
+            if (result && !scanProcessing) {
+                const text = result.getText();
+                if (text) onScanDetected(text);
             }
         });
 
-        await scanner.start();
-        if (startupFailed) {
-            scanSetStatus('Erreur : ' + startupErrorMsg, true);
-            scanner = null;
-        } else {
-            scanStartBtn.textContent = 'Arrêter la caméra';
-            scanStartBtn.classList.add('btn-danger');
-            scanTorchBtn.style.display = 'inline-flex';
-            scanSetStatus('Visez le code-barres…');
-        }
     } catch(err) {
-        scanSetStatus('Erreur caméra : ' + (err ? err.message : String(err)), true);
-        resetScanButtons();
-        scanner = null;
+        console.error('Erreur scanner:', err);
+        scanSetStatus('❌ Erreur caméra: ' + (err.message || String(err)), true);
+        resetScanUI();
     }
 }
 
-// Boutons scanner
-scanStartBtn.onclick = () => {
-    if (scanner && scanner.isRunning) {
-        stopScanCamera();
-    } else {
-        startScanCamera();
-    }
-};
+function stopScanCamera() {
+    resetScanUI();
+    scanSetStatus('🛑 Caméra arrêtée');
+}
 
-scanStopBtn.onclick = () => {
-    stopScanCamera();
-    scanSetStatus('Caméra arrêtée');
-};
+// Boutons
+scanStartBtn.onclick = startScanCamera;
+scanStopBtn.onclick = stopScanCamera;
 
-scanTorchBtn.onclick = async () => {
-    if (!scanner || !scanner.isRunning) return;
-    try {
-        const on = await scanner.toggleTorch();
-        scanTorchBtn.style.opacity = on ? '1' : '0.5';
-    } catch(err) {
-        scanSetStatus('Torche non disponible', true);
-    }
-};
-
-// Saisie manuelle d'un code-barres
+// Saisie manuelle
 document.getElementById('scan-manual-ean').addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
         const val = e.target.value.trim();
@@ -1198,13 +1149,13 @@ document.getElementById('scan-manual-ean').addEventListener('keydown', async (e)
     }
 });
 
-// Détection d'un code-barres
 async function onScanDetected(ean) {
     if (scanProcessing) return;
     scanProcessing = true;
     if (navigator.vibrate) navigator.vibrate(80);
+    // Arrêter le scan automatiquement
     stopScanCamera();
-    scanSetStatus('Recherche du produit ' + ean + '…');
+    scanSetStatus('🔍 Recherche du produit ' + ean + '…');
 
     try {
         const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`);
@@ -1222,15 +1173,10 @@ async function onScanDetected(ean) {
     scanProcessing = false;
 }
 
-// Deviner la catégorie
 function guessCategorieFromProduct(p) {
     const hay = ((p.categories || '') + ' ' + (p.product_name_fr || p.product_name || '')).toLowerCase();
-    const rules = [
-        [/bière|vin|whisky|vodka|rhum|pastis|kir|champagne|cidre|porto|muscat|saké|tequila|gin|limonade|soda|cola|jus|eau minérale|eau gazeuse|thé|infusion|sirop|energisant/, 'boisson'],
-        [/nourriture|plat|sauce|pâte|riz|pomme de terre|frite|purée|gâteau|biscuit|pain|baguette|viennoiserie|céréale|muesli|chocolat|bonbon|sucrerie|confiture|miel|nutella|beurre|huile|vinaigre|sel|poivre|épice|herbe/, 'nourriture'],
-        [/bière|vin|whisky|vodka|rhum|pastis|kir|champagne|cidre|porto|muscat|saké|tequila|gin/, 'boisson']
-    ];
-    for (const [regex, cat] of rules) if (regex.test(hay)) return cat;
+    if (/bière|vin|whisky|vodka|rhum|pastis|champagne|cidre|porto|muscat|tequila|gin|limonade|soda|cola|jus|eau|thé|sirop|energisant/.test(hay)) return 'boisson';
+    if (/nourriture|plat|sauce|pâte|riz|pomme de terre|frite|gâteau|biscuit|pain|viennoiserie|céréale|chocolat|bonbon|confiture|miel|nutella|beurre|huile|vinaigre|sel|poivre|épice/.test(hay)) return 'nourriture';
     return 'autre';
 }
 
@@ -1243,7 +1189,6 @@ function renderScanResult(ean, p) {
         imageUrl: p.image_front_small_url || p.image_url || '',
         ean,
         nutriscore: p.nutriscore_grade || '',
-        novaGroup: p.nova_group || '',
         catGuess
     };
 
@@ -1260,32 +1205,16 @@ function renderScanResult(ean, p) {
         badgesEl.appendChild(b);
     }
 
-    // Remplir les selects
-    const catSel = document.getElementById('scan-r-cat');
-    catSel.innerHTML = [
-        {id:'boisson',label:'🍺 Boisson'},
-        {id:'nourriture',label:'🍔 Nourriture'},
-        {id:'autre',label:'📦 Autre'}
-    ].map(c => `<option value="${c.id}"${c.id===catGuess?' selected':''}>${c.label}</option>`).join('');
+    document.getElementById('scan-r-cat').value = catGuess;
 
-    // Magasins (on utilise la liste des magasins de l'appli)
-    const magSel = document.getElementById('scan-r-magasin');
-    magSel.innerHTML = '<option value="">Sans magasin</option>';
-
-    // Prix unité par défaut
-    const uniteSel = document.getElementById('scan-r-uniteprix');
-    uniteSel.value = 'unite';
-
-    // Vérifier si le produit existe déjà dans les données
+    // Vérifier si le produit existe déjà
     const existingProd = data.boissons.find(b => b.codeBarre === ean || b.nom.toLowerCase() === nom.toLowerCase());
     if (existingProd) {
         document.getElementById('scan-r-prix').value = existingProd.prix || '';
-        uniteSel.value = existingProd.unite || 'unite';
-        // Sélectionner la catégorie existante
-        catSel.value = existingProd.type || 'autre';
+        document.getElementById('scan-r-uniteprix').value = existingProd.unite || 'unite';
     } else {
         document.getElementById('scan-r-prix').value = '';
-        uniteSel.value = 'unite';
+        document.getElementById('scan-r-uniteprix').value = 'unite';
     }
 
     scanResultCard.style.display = 'block';
@@ -1311,7 +1240,6 @@ document.getElementById('scan-confirm-btn').onclick = async () => {
         return;
     }
 
-    // Ajouter le produit dans les données
     data.boissons.push({
         id: Date.now(),
         nom,
@@ -1327,7 +1255,6 @@ document.getElementById('scan-confirm-btn').onclick = async () => {
     mettreAJourSelects();
     debounceSauvegarde();
 
-    // Mettre à jour le champ correspondant selon le mode
     if (scanMode === 'achat') {
         const sel = document.getElementById('achatBoisson');
         const nouveau = data.boissons.find(b => b.codeBarre === codeBarre);
@@ -1338,17 +1265,14 @@ document.getElementById('scan-confirm-btn').onclick = async () => {
         alert('✅ Code-barre associé au produit "' + nom + '"');
     }
 
-    // Fermer le scanner
     closeScanModal();
 };
 
-// Fonctions d'ouverture/fermeture du scanner
+// Fonctions d'ouverture/fermeture
 window.ouvrirScannerModal = function(mode) {
     scanMode = mode;
     scanResultCard.style.display = 'none';
-    scanZoneEl.style.display = 'none';
-    scanZoneEl.innerHTML = '';
-    resetScanButtons();
+    resetScanUI();
     scanSetStatus('');
     document.getElementById('scan-manual-ean').value = '';
     document.getElementById('scan-modal').style.display = 'flex';
@@ -1360,8 +1284,6 @@ function closeScanModal() {
 }
 
 document.getElementById('close-scan-modal').onclick = closeScanModal;
-
-// Fermer le modal en cliquant sur l'overlay
 document.getElementById('scan-modal').addEventListener('click', function(e) {
     if (e.target === this) closeScanModal();
 });
