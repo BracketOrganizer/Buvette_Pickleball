@@ -557,6 +557,7 @@
         <h3 style="text-align:center;">📷 Scanner un code-barre</h3>
         <div id="scannerReader"></div>
         <p id="scannerStatus" style="font-size:13px;color:#888;min-height:18px;margin-top:10px;">Initialisation...</p>
+        <p id="scannerDebug" style="font-size:11px;color:#aaa;min-height:14px;margin:0;font-family:monospace;"></p>
         <div style="display:flex;gap:8px;margin-top:8px;">
             <input type="text" id="scannerManuelInput" placeholder="Ou saisissez le code manuellement" inputmode="numeric" style="flex:1;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;" onkeydown="if(event.key==='Enter'){event.preventDefault();validerCodeManuel();}">
             <button type="button" class="btn-scan" style="padding:0 14px;" onclick="validerCodeManuel()"><i class="fas fa-check"></i></button>
@@ -618,7 +619,7 @@ let data = { apports: [], boissons: [], achats: [], ventes: [], remboursements: 
 let visitorCode = null;
 let saveTimeout, isSaving = false;
 let triApports = 'desc', triAchats = 'desc', triVentes = 'desc', triRemboursements = 'desc', triOfferts = 'desc';
-let html5QrCode = null, scannerContext = null, scannerDernierCode = null;
+let html5QrCode = null, scannerContext = null, scannerDernierCode = null, scannerFrameCount = 0;
 
 // ===== SAUVEGARDE =====
 function mettreAJourStatutSauvegarde(statut) {
@@ -1097,8 +1098,8 @@ function ouvrirScanner(context) {
                 Html5QrcodeSupportedFormats.CODABAR, Html5QrcodeSupportedFormats.ITF,
                 Html5QrcodeSupportedFormats.QR_CODE
             ],
-            // Utilise le détecteur natif du téléphone quand il existe (bien plus fiable
-            // sur les codes-barres 1D que le décodeur JS pur utilisé en repli).
+            // Détecteur natif du téléphone quand il existe (Chrome/Edge Android surtout).
+            // Sur Safari (non supporté), la librairie retombe automatiquement sur son décodeur JS.
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
             verbose: false
         });
@@ -1106,29 +1107,30 @@ function ouvrirScanner(context) {
         if (statusEl) statusEl.textContent = '❌ Erreur d\'initialisation du scanner';
         return;
     }
+    scannerFrameCount = 0;
     Html5Qrcode.getCameras().then(cams => {
         if (!cams || !cams.length) { if (statusEl) statusEl.textContent = '❌ Aucune caméra détectée'; return; }
         const cam = cams.find(c => /back|rear|environment/i.test(c.label || '')) || cams[cams.length - 1];
         html5QrCode.start(
             cam.id,
+            // Pas de qrbox : on analyse toute l'image (évite tout recadrage mal calculé,
+            // qui empêchait certains codes-barres larges d'être vus par le décodeur).
+            // Résolution modérée : une résolution trop élevée ralentit le décodeur JS
+            // et peut l'empêcher de terminer un cycle de lecture complet.
             {
                 fps: 10,
-                qrbox: (viewfinderWidth, viewfinderHeight) => {
-                    // Zone de visée large et basse, adaptée aux codes-barres 1D
-                    const w = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.9);
-                    return { width: Math.min(viewfinderWidth * 0.9, 320), height: Math.max(w * 0.45, 100) };
-                },
-                aspectRatio: 1.333334,
-                disableFlip: false,
-                videoConstraints: {
-                    facingMode: { ideal: 'environment' },
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
-                    advanced: [{ focusMode: 'continuous' }]
-                }
+                videoConstraints: { width: { ideal: 1280 }, height: { ideal: 720 } }
             },
             (decodedText) => onCodeScanne(decodedText),
-            () => {} // échecs de lecture image par image : ignorés en silence
+            (errorMessage) => {
+                // Un "échec" par image est normal tant qu'aucun code n'est visé : on l'utilise
+                // juste pour prouver que le scan tourne bien, sans ouvrir la console.
+                scannerFrameCount++;
+                const dbg = document.getElementById('scannerDebug');
+                if (dbg && scannerFrameCount % 5 === 0) {
+                    dbg.textContent = 'Analyse en cours… (' + scannerFrameCount + ' images testées)';
+                }
+            }
         ).then(() => {
             if (statusEl) statusEl.textContent = '📷 Visez le code-barre bien à plat, à ~10-15 cm';
         }).catch(e => {
