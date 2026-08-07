@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<script>
+  if(!sessionStorage.getItem('_reloaded')){
+    sessionStorage.setItem('_reloaded','1');
+    location.reload(true);
+  }
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bar du Pickleball de Mauves</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-    <!-- QuaggaJS : bibliothèque de scan de code-barres légère et fiable -->
-    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7f3ee; min-height: 100vh; padding: 10px; }
@@ -108,48 +112,100 @@
         #loginPanel, #loginPanel * { pointer-events:auto !important; opacity:1 !important; }
         .modal, .modal * { pointer-events:auto !important; opacity:1 !important; }
 
-        /* ===== SCANNER QUAGGA ===== */
+        /* ===== SCANNER (style MesCourses) ===== */
         .field-with-scan { display:flex; gap:8px; align-items:stretch; }
         .field-with-scan select, .field-with-scan input { flex:1; min-width:0; }
         .btn-scan { background:#17a2b8; color:#fff; border:none; border-radius:8px; width:auto; flex-shrink:0; padding:0 16px; font-size:18px; cursor:pointer; min-height:48px; touch-action:manipulation; }
         .btn-scan:active { background:#128293; }
-        #scannerContainer {
-            width:100%;
-            min-height:240px;
-            background:#000;
-            border-radius:10px;
+
+        /* Zone scanner - style MesCourses */
+        #scan-modal .modal-content { max-width:440px; }
+        #scan-zone {
+            background:#1a1a18;
+            border-radius:12px;
             overflow:hidden;
             position:relative;
-        }
-        #scannerContainer video {
-            width:100% !important;
-            border-radius:10px;
-        }
-        #scannerContainer .drawingBuffer {
-            position:absolute;
-            top:0;
-            left:0;
+            min-height:60px;
+            aspect-ratio:4/3;
+            margin-top:8px;
             width:100%;
-            height:100%;
+        }
+        #scan-zone video {
+            width:100% !important;
+            height:100% !important;
+            object-fit:cover;
+        }
+        #scan-zone .scan-overlay {
+            position:absolute;
+            inset:0;
             pointer-events:none;
+            z-index:10;
         }
-        #scannerStatus {
-            font-size:13px;
-            color:#888;
-            min-height:18px;
-            margin-top:10px;
-            text-align:center;
+        #scan-zone .scan-overlay__mask {
+            position:absolute;
+            background:rgba(0,0,0,0.55);
         }
-        #scannerAssignZone {
-            background:#fff3cd;
-            border:1px solid #ffeaa7;
-            border-radius:8px;
-            padding:12px;
-            margin-top:10px;
-            display:none;
-            text-align:left;
+        #scan-zone .scan-overlay__region {
+            position:absolute;
+            width:var(--scan-w);
+            height:var(--scan-h);
+            left:var(--scan-x);
+            top:var(--scan-y);
         }
-        #scannerAssignZone select { margin-top:4px; }
+        #scan-zone .scan-overlay__bracket {
+            position:absolute;
+            width:24px;
+            height:24px;
+            border-color:#00ff88;
+            border-style:solid;
+            border-width:0;
+        }
+        #scan-zone .scan-overlay__bracket--tl { top:-1px; left:-1px; border-top-width:3px; border-left-width:3px; border-top-left-radius:4px; }
+        #scan-zone .scan-overlay__bracket--tr { top:-1px; right:-1px; border-top-width:3px; border-right-width:3px; border-top-right-radius:4px; }
+        #scan-zone .scan-overlay__bracket--bl { bottom:-1px; left:-1px; border-bottom-width:3px; border-left-width:3px; border-bottom-left-radius:4px; }
+        #scan-zone .scan-overlay__bracket--br { bottom:-1px; right:-1px; border-bottom-width:3px; border-right-width:3px; border-bottom-right-radius:4px; }
+        #scan-zone .scan-overlay__line {
+            position:absolute;
+            left:10%;
+            top:0;
+            width:80%;
+            height:calc(100% - 2px);
+            animation:scan-sweep 2.5s ease-in-out infinite;
+        }
+        #scan-zone .scan-overlay__line::before {
+            content:'';
+            display:block;
+            width:100%;
+            height:2px;
+            background:#00ff88;
+            box-shadow:0 0 8px #00ff88;
+            border-radius:1px;
+        }
+        @keyframes scan-sweep {
+            0%, 100% { transform:translateY(0); }
+            50% { transform:translateY(100%); }
+        }
+
+        #scan-status { font-size:13px; color:#888; min-height:18px; margin-top:10px; text-align:center; }
+        #scan-result-card { display:none; margin-top:1rem; border-top:1px dashed #d4c9b5; padding-top:1rem; text-align:left; }
+        #scan-result-card .scan-r-row { display:flex; gap:.8rem; margin-bottom:.7rem; align-items:center; }
+        #scan-result-card .scan-r-img { width:64px; height:64px; object-fit:contain; background:#fff; border:1px solid #d4c9b5; border-radius:8px; flex-shrink:0; }
+        #scan-result-card .scan-r-nom { font-weight:700; font-size:.95rem; }
+        #scan-result-card .scan-r-marque { color:#7a6a50; font-size:.8rem; margin-top:.15rem; }
+        #scan-result-card .scan-r-badges { margin-top:.3rem; display:flex; gap:.3rem; flex-wrap:wrap; }
+        #scan-result-card .scan-r-badge {
+            font-size:.68rem; font-weight:700; padding:.15rem .4rem; border-radius:4px;
+            background:#d8f3dc; color:#2d6a4f;
+        }
+        #scan-result-card .frow { display:flex; gap:.5rem; flex-wrap:wrap; }
+        #scan-result-card .frow>* { flex:1; min-width:100px; }
+
+        .btn-primary { background:#2d6a4f; color:#fff; }
+        .btn-primary:hover { background:#40916c; }
+        .btn-outline { background:transparent; border:1.5px solid #d4c9b5; color:#5c5c52; }
+        .btn-outline:hover { border-color:#b0a090; background:#f0ebe2; }
+        .btn-sm { padding:.38rem .7rem; font-size:.78rem; border-radius:8px; }
+        .btn-icon { padding:.5rem; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; }
 
         @media (max-width: 640px) {
             body { padding:0; }
@@ -168,7 +224,6 @@
             .summary-card h3 { font-size:11px; }
             .summary-card p { font-size:16px; }
             .stock-card { padding:10px; }
-            .stock-card > div { flex-wrap:wrap; }
             table { font-size:13px; }
             th, td { padding:8px 5px; }
             .icon-btn { font-size:16px; padding:6px; }
@@ -177,12 +232,33 @@
             .top-bar { gap:6px; }
             .top-bar button, .top-bar .btn-small { font-size:12px; padding:9px 10px; }
             .btn-scan { padding:0 14px; min-width:48px; }
-            #scannerContainer { min-height:200px; }
+            #scan-zone { min-height:200px; }
+            #scan-result-card .frow { flex-direction:column; }
+            #scan-result-card .frow>* { min-width:unset; }
         }
+        @media (max-width: 400px) {
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+            .nav-brand { font-size:14px; }
+        }
+        @media (max-width: 480px) {
+            .modal-buttons { flex-direction:column; }
+            .modal-buttons button { width:100%; }
+            .icon-btn { min-width:40px; min-height:40px; font-size:17px; }
+            .action-icons { gap:8px; }
+            input, select { padding:13px 12px; font-size:16px; }
+            label { font-size:13px; }
+            .form-group { margin-bottom:14px; }
+            #utilisateurs .form-group { min-width:100% !important; }
+            #utilisateurs > div > div[style*="align-items:flex-end"] { align-items:stretch !important; }
+        }
+        /* Scrollbar */
+        ::-webkit-scrollbar{width:4px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:#d4c9b5;border-radius:4px}
     </style>
 </head>
 <body>
-<!-- Écran de connexion style Tournoi Pickleball -->
+<!-- Écran de connexion -->
 <div id="loginScreen">
     <div class="login-box">
         <div class="login-brand">🍺 Bar Pickleball</div>
@@ -319,7 +395,7 @@
             <label>Produit</label>
             <div class="field-with-scan">
                 <select id="achatBoisson"></select>
-                <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScanner('achat')"><i class="fas fa-barcode"></i></button>
+                <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScannerModal('achat')"><i class="fas fa-barcode"></i></button>
             </div>
         </div>
         <div class="form-group"><label>Quantité</label><input type="number" id="achatQuantite" placeholder="Ex: 24" min="1" inputmode="numeric"></div>
@@ -363,7 +439,7 @@
             <label>Code-barre (optionnel)</label>
             <div class="field-with-scan">
                 <input type="text" id="boissonCodeBarre" placeholder="Scannez ou saisissez le code" inputmode="numeric">
-                <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScanner('boisson')"><i class="fas fa-barcode"></i></button>
+                <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScannerModal('boisson')"><i class="fas fa-barcode"></i></button>
             </div>
         </div>
         <button class="no-print" onclick="ajouterBoisson()"><i class="fas fa-plus"></i> Ajouter le produit</button>
@@ -524,20 +600,53 @@
     </div>
 </div>
 
-<!-- Modal Scanner (Quagga) -->
-<div id="scannerModal" class="modal no-print">
+<!-- Modal Scanner (style MesCourses) -->
+<div id="scan-modal" class="modal no-print">
     <div class="modal-content" style="max-width:440px;text-align:center;">
         <h3 style="text-align:center;">📷 Scanner un code-barre</h3>
-        <div id="scannerContainer"></div>
-        <p id="scannerStatus" style="font-size:13px;color:#888;min-height:18px;margin-top:10px;">📷 Initialisation de la caméra...</p>
-        <div id="scannerAssignZone" style="display:none;text-align:left;margin-top:10px;">
-            <p style="font-size:13px;color:#856404;margin-bottom:8px;">Code inconnu : <strong id="scannerCodeInconnu"></strong></p>
-            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Associer ce code à un produit existant</label>
-            <select id="scannerAssignSelect" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;"></select>
-            <button class="btn-success" style="margin-top:8px;" onclick="associerCodeBarreScanne()"><i class="fas fa-link"></i> Associer et sélectionner</button>
+        <div id="scan-zone"></div>
+        <p id="scan-status" style="font-size:13px;color:#888;min-height:18px;margin-top:10px;"></p>
+
+        <div style="display:flex;gap:.5rem;margin-top:.8rem;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-full" id="scan-start-btn" style="padding:.7rem;flex:2;min-width:120px;">Démarrer la caméra</button>
+            <button class="btn btn-outline btn-icon" id="scan-torch-btn" style="display:none;flex:none;min-width:48px;" title="Torche">💡</button>
+            <button class="btn btn-outline btn-sm" id="scan-stop-btn" style="flex:none;min-width:60px;">Arrêter</button>
         </div>
-        <div class="modal-buttons">
-            <button class="btn-warning" onclick="fermerScanner()"><i class="fas fa-times"></i> Fermer</button>
+
+        <input type="text" id="scan-manual-ean" placeholder="Ou saisir un code-barres (EAN)" inputmode="numeric" style="margin-top:.6rem;padding:10px;border:1.5px solid #d4c9b5;border-radius:8px;width:100%;font-size:16px;">
+
+        <div id="scan-result-card">
+            <div class="scan-r-row">
+                <img id="scan-r-img" src="" class="scan-r-img" alt="">
+                <div>
+                    <div id="scan-r-nom" class="scan-r-nom"></div>
+                    <div id="scan-r-marque" class="scan-r-marque"></div>
+                    <div id="scan-r-badges" class="scan-r-badges"></div>
+                </div>
+            </div>
+            <div class="frow" style="margin-bottom:.7rem;">
+                <select id="scan-r-cat" style="flex:1;"></select>
+            </div>
+            <div class="frow" style="margin-bottom:.7rem;">
+                <select id="scan-r-magasin" style="flex:1;">
+                    <option value="">Sans magasin</option>
+                </select>
+                <input type="number" step="0.01" min="0" id="scan-r-prix" placeholder="Prix (€)" style="flex:1;">
+                <select id="scan-r-uniteprix" style="flex:none;width:auto;min-width:80px;">
+                    <option value="unite">Unité</option>
+                    <option value="pack">Pack</option>
+                    <option value="kg">kg</option>
+                    <option value="portion">Portion</option>
+                </select>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" id="scan-rescan-btn" style="flex:1;">🔄 Rescanner</button>
+                <button class="btn btn-primary btn-sm" id="scan-confirm-btn" style="flex:1;">✅ Ajouter</button>
+            </div>
+        </div>
+
+        <div style="margin-top:1rem;">
+            <button class="btn btn-outline btn-full" id="close-scan-modal">Fermer</button>
         </div>
     </div>
 </div>
@@ -587,8 +696,6 @@ let data = { apports: [], boissons: [], achats: [], ventes: [], remboursements: 
 let visitorCode = null;
 let saveTimeout, isSaving = false;
 let triApports = 'desc', triAchats = 'desc', triVentes = 'desc', triRemboursements = 'desc', triOfferts = 'desc';
-let scannerMode = null;
-let scannerActive = false;
 
 // ===== SAUVEGARDE =====
 function mettreAJourStatutSauvegarde(statut) {
@@ -971,233 +1078,293 @@ function afficherStock() {
     document.getElementById('totalRupture').textContent = rupture;
 }
 
-// ===== SCANNER QUAGGA (fonctionnel) =====
-let dernierCodeScanne = null, dernierScanTimestamp = 0;
+// ===== SCANNER (version MesCourses) =====
+let scanner = null;
+let scanProcessing = false;
+let scanMode = null; // 'achat' ou 'boisson'
+let scanLastProduct = null; // pour stockage temporaire avant ajout
 
-function ouvrirScanner(mode) {
-    if (scannerActive) {
-        fermerScanner();
-        // Petit délai pour réinitialiser proprement
-        setTimeout(() => ouvrirScanner(mode), 300);
-        return;
-    }
-    scannerMode = mode;
-    const modal = document.getElementById('scannerModal');
-    const status = document.getElementById('scannerStatus');
-    const assignZone = document.getElementById('scannerAssignZone');
-    if (assignZone) assignZone.style.display = 'none';
-    if (status) { status.style.color = '#888'; status.textContent = '📷 Demande d\'accès à la caméra...'; }
-    if (modal) modal.style.display = 'flex';
+const scanZoneEl = document.getElementById('scan-zone');
+const scanStartBtn = document.getElementById('scan-start-btn');
+const scanStopBtn = document.getElementById('scan-stop-btn');
+const scanTorchBtn = document.getElementById('scan-torch-btn');
+const scanStatusEl = document.getElementById('scan-status');
+const scanResultCard = document.getElementById('scan-result-card');
 
-    // Nettoyer l'ancien conteneur
-    const container = document.getElementById('scannerContainer');
-    container.innerHTML = '';
-
-    // Vérifier que Quagga est disponible
-    if (typeof Quagga === 'undefined') {
-        if (status) status.textContent = '❌ Bibliothèque Quagga non chargée (vérifiez la connexion internet).';
-        return;
-    }
-
-    scannerActive = true;
-
-    // Configurer Quagga
-    Quagga.init({
-        inputStream: {
-            name: "Live",
-            type: "LiveStream",
-            target: container,
-            constraints: {
-                facingMode: "environment",
-                width: { ideal: 640 },
-                height: { ideal: 480 }
-            }
-        },
-        decoder: {
-            readers: [
-                "ean_reader",
-                "ean_8_reader",
-                "code_128_reader",
-                "code_39_reader",
-                "code_93_reader",
-                "codabar_reader",
-                "upc_reader",
-                "upc_e_reader",
-                "i2of5_reader"
-            ],
-            multiple: false,
-            debug: {
-                showCanvas: true,
-                showPatches: false,
-                showFoundPatches: false,
-                showSkeleton: false,
-                showLabels: false,
-                showPatchLabels: false,
-                showRemainingPatchLabels: false,
-                boxFromPatches: {
-                    showTransformed: false,
-                    showTransformedBox: false,
-                    showBB: false
-                }
-            }
-        },
-        locator: {
-            patchSize: "large",
-            halfSample: true
-        }
-    }, function(err) {
-        if (err) {
-            console.error("Quagga init error:", err);
-            if (status) status.textContent = '❌ Erreur d\'initialisation de la caméra.';
-            scannerActive = false;
-            return;
-        }
-        if (status) status.textContent = '📷 Visez un code-barre...';
-        Quagga.start();
-    });
-
-    // Détection d'un code
-    Quagga.onDetected(function(result) {
-        if (!result || !result.codeResult) return;
-        const code = result.codeResult.code;
-        if (!code) return;
-        
-        // Anti-rebond
-        const now = Date.now();
-        if (code === dernierCodeScanne && (now - dernierScanTimestamp) < 2000) return;
-        dernierCodeScanne = code;
-        dernierScanTimestamp = now;
-
-        // Vibration si possible
-        if (navigator.vibrate) navigator.vibrate(100);
-
-        const produit = data.boissons.find(b => b.codeBarre === code);
-        if (produit) {
-            if (scannerMode === 'achat') {
-                const sel = document.getElementById('achatBoisson');
-                if (sel) sel.value = produit.id;
-                // Feedback visuel
-                if (document.getElementById('scannerStatus')) {
-                    document.getElementById('scannerStatus').textContent = '✅ ' + produit.nom + ' sélectionné !';
-                    document.getElementById('scannerStatus').style.color = '#27ae60';
-                }
-                setTimeout(() => fermerScanner(), 600);
-            } else if (scannerMode === 'boisson') {
-                const inp = document.getElementById('boissonCodeBarre');
-                if (inp) inp.value = code;
-                if (document.getElementById('scannerStatus')) {
-                    document.getElementById('scannerStatus').textContent = '✅ Code associé au produit !';
-                    document.getElementById('scannerStatus').style.color = '#27ae60';
-                }
-                setTimeout(() => fermerScanner(), 600);
-            }
-            return;
-        }
-
-        // Code inconnu
-        if (scannerMode === 'boisson') {
-            const inp = document.getElementById('boissonCodeBarre');
-            if (inp) inp.value = code;
-            if (document.getElementById('scannerStatus')) {
-                document.getElementById('scannerStatus').textContent = '✅ Code scanné ! Vous pouvez ajouter le produit.';
-                document.getElementById('scannerStatus').style.color = '#27ae60';
-            }
-            setTimeout(() => fermerScanner(), 600);
-            return;
-        }
-
-        // Mode achat : code inconnu -> proposer association
-        const status = document.getElementById('scannerStatus');
-        if (status) { 
-            status.style.color = '#856404'; 
-            status.textContent = '🔍 Code inconnu — associez-le à un produit :'; 
-        }
-        const zone = document.getElementById('scannerAssignZone');
-        const codeSpan = document.getElementById('scannerCodeInconnu');
-        const sel = document.getElementById('scannerAssignSelect');
-        if (codeSpan) codeSpan.textContent = code;
-        if (sel) {
-            sel.innerHTML = '';
-            data.boissons.forEach(b => { 
-                const o = document.createElement('option'); 
-                o.value = b.id; 
-                o.textContent = b.nom + ' (' + b.prix.toFixed(2) + '€)'; 
-                sel.appendChild(o); 
-            });
-        }
-        if (zone) { 
-            zone.style.display = 'block'; 
-            zone.dataset.code = code; 
-        }
-    });
-
-    Quagga.onProcessed(function(result) {
-        // Optionnel : dessiner le cadre de détection
-        var drawingCtx = Quagga.canvas.ctx.overlay;
-        var drawingCanvas = Quagga.canvas.dom.overlay;
-        if (result) {
-            if (result.boxes) {
-                drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-                result.boxes.filter(function(box) {
-                    return box !== result.box;
-                }).forEach(function(box) {
-                    Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, { color: "green", lineWidth: 2 });
-                });
-            }
-            if (result.box) {
-                Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, { color: "#00F", lineWidth: 2 });
-            }
-            if (result.codeResult && result.codeResult.code) {
-                Quagga.ImageDebug.drawPath(result.line, { x: 0, y: 1 }, drawingCtx, { color: "red", lineWidth: 5 });
-            }
-        }
-    });
+function scanSetStatus(msg, isError){
+    scanStatusEl.textContent = msg || '';
+    scanStatusEl.style.color = isError ? '#c0392b' : '#888';
 }
 
-function fermerScanner() {
-    scannerActive = false;
-    if (typeof Quagga !== 'undefined' && Quagga) {
-        try { Quagga.stop(); } catch(e) {}
-        try { Quagga.offDetected(); } catch(e) {}
-        try { Quagga.offProcessed(); } catch(e) {}
-    }
-    const modal = document.getElementById('scannerModal');
-    if (modal) modal.style.display = 'none';
-    const container = document.getElementById('scannerContainer');
-    if (container) container.innerHTML = '';
-    const assignZone = document.getElementById('scannerAssignZone');
-    if (assignZone) assignZone.style.display = 'none';
-    scannerMode = null;
-    const status = document.getElementById('scannerStatus');
-    if (status) { status.textContent = '📷 Prêt'; status.style.color = '#888'; }
+function resetScanButtons(){
+    scanStartBtn.textContent = 'Démarrer la caméra';
+    scanStartBtn.classList.remove('btn-danger');
+    scanTorchBtn.style.display = 'none';
+    scanZoneEl.style.display = 'none';
+    scanZoneEl.innerHTML = '';
 }
 
-function associerCodeBarreScanne() {
-    const zone = document.getElementById('scannerAssignZone');
-    const code = zone ? zone.dataset.code : null;
-    const sel = document.getElementById('scannerAssignSelect');
-    if (!code || !sel || !sel.value) {
-        alert('❌ Sélectionnez un produit avant d\'associer.');
-        return;
+function stopScanCamera(){
+    if (scanner && scanner.isRunning) {
+        try { scanner.stop(); } catch(e) {}
     }
-    const boissonId = parseInt(sel.value);
-    if (data.boissons.some(b => b.codeBarre === code)) {
-        alert('❌ Ce code est déjà associé à un autre produit.');
-        return;
-    }
-    const b = data.boissons.find(x => x.id === boissonId);
-    if (b) {
-        b.codeBarre = code;
-        afficherBoissons(); 
-        debounceSauvegarde();
-        if (scannerMode === 'achat') {
-            const selAchat = document.getElementById('achatBoisson');
-            if (selAchat) selAchat.value = boissonId;
-        }
-        alert('✅ Code associé à "' + b.nom + '" !');
-    }
-    fermerScanner();
+    scanner = null;
+    resetScanButtons();
 }
+
+async function startScanCamera(){
+    if (scanner && scanner.isRunning) return;
+
+    // Vérifier que la bibliothèque WebWasmBarcodeReader est disponible
+    if (typeof WebWasmBarcodeReader === 'undefined') {
+        scanSetStatus('⚠️ Le moteur de scan n\'est pas chargé. Rechargez la page.', true);
+        return;
+    }
+
+    scanSetStatus('Ouverture de la caméra…');
+    scanZoneEl.style.display = 'block';
+    scanZoneEl.innerHTML = '';
+    // Ajuster la hauteur en fonction de la largeur pour respecter le ratio 4:3
+    const rect = scanZoneEl.getBoundingClientRect();
+    scanZoneEl.style.height = Math.round(rect.width * 0.75) + 'px';
+    await new Promise(r => requestAnimationFrame(r));
+
+    let startupFailed = false, startupErrorMsg = '';
+
+    try {
+        scanner = new WebWasmBarcodeReader.BarcodeScanner({
+            container: scanZoneEl,
+            beepOnDetect: true,
+            facingMode: 'environment',
+            scanRegion: { width: 0.88, height: 0.34 },
+            resolutionScale: 2.2,
+            onDetect: (result) => {
+                if (result && result.data) onScanDetected(result.data);
+            },
+            onError: (err) => {
+                console.error('Erreur scanner:', err);
+                startupFailed = true;
+                startupErrorMsg = err ? err.message : String(err);
+                resetScanButtons();
+            }
+        });
+
+        await scanner.start();
+        if (startupFailed) {
+            scanSetStatus('Erreur : ' + startupErrorMsg, true);
+            scanner = null;
+        } else {
+            scanStartBtn.textContent = 'Arrêter la caméra';
+            scanStartBtn.classList.add('btn-danger');
+            scanTorchBtn.style.display = 'inline-flex';
+            scanSetStatus('Visez le code-barres…');
+        }
+    } catch(err) {
+        scanSetStatus('Erreur caméra : ' + (err ? err.message : String(err)), true);
+        resetScanButtons();
+        scanner = null;
+    }
+}
+
+// Boutons scanner
+scanStartBtn.onclick = () => {
+    if (scanner && scanner.isRunning) {
+        stopScanCamera();
+    } else {
+        startScanCamera();
+    }
+};
+
+scanStopBtn.onclick = () => {
+    stopScanCamera();
+    scanSetStatus('Caméra arrêtée');
+};
+
+scanTorchBtn.onclick = async () => {
+    if (!scanner || !scanner.isRunning) return;
+    try {
+        const on = await scanner.toggleTorch();
+        scanTorchBtn.style.opacity = on ? '1' : '0.5';
+    } catch(err) {
+        scanSetStatus('Torche non disponible', true);
+    }
+};
+
+// Saisie manuelle d'un code-barres
+document.getElementById('scan-manual-ean').addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+        const val = e.target.value.trim();
+        if (val) await onScanDetected(val);
+    }
+});
+
+// Détection d'un code-barres
+async function onScanDetected(ean) {
+    if (scanProcessing) return;
+    scanProcessing = true;
+    if (navigator.vibrate) navigator.vibrate(80);
+    stopScanCamera();
+    scanSetStatus('Recherche du produit ' + ean + '…');
+
+    try {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`);
+        const data = await res.json();
+        if (data.status !== 1) {
+            scanSetStatus('❌ Produit non trouvé', true);
+            scanProcessing = false;
+            return;
+        }
+        renderScanResult(ean, data.product);
+        scanSetStatus('');
+    } catch(err) {
+        scanSetStatus('❌ Erreur réseau', true);
+    }
+    scanProcessing = false;
+}
+
+// Deviner la catégorie
+function guessCategorieFromProduct(p) {
+    const hay = ((p.categories || '') + ' ' + (p.product_name_fr || p.product_name || '')).toLowerCase();
+    const rules = [
+        [/bière|vin|whisky|vodka|rhum|pastis|kir|champagne|cidre|porto|muscat|saké|tequila|gin|limonade|soda|cola|jus|eau minérale|eau gazeuse|thé|infusion|sirop|energisant/, 'boisson'],
+        [/nourriture|plat|sauce|pâte|riz|pomme de terre|frite|purée|gâteau|biscuit|pain|baguette|viennoiserie|céréale|muesli|chocolat|bonbon|sucrerie|confiture|miel|nutella|beurre|huile|vinaigre|sel|poivre|épice|herbe/, 'nourriture'],
+        [/bière|vin|whisky|vodka|rhum|pastis|kir|champagne|cidre|porto|muscat|saké|tequila|gin/, 'boisson']
+    ];
+    for (const [regex, cat] of rules) if (regex.test(hay)) return cat;
+    return 'autre';
+}
+
+function renderScanResult(ean, p) {
+    const nom = p.product_name_fr || p.product_name || ('Produit ' + ean);
+    const catGuess = guessCategorieFromProduct(p);
+    scanLastProduct = {
+        nom,
+        marque: p.brands || '',
+        imageUrl: p.image_front_small_url || p.image_url || '',
+        ean,
+        nutriscore: p.nutriscore_grade || '',
+        novaGroup: p.nova_group || '',
+        catGuess
+    };
+
+    document.getElementById('scan-r-img').src = scanLastProduct.imageUrl || '';
+    document.getElementById('scan-r-nom').textContent = nom;
+    document.getElementById('scan-r-marque').textContent = scanLastProduct.marque || '—';
+
+    const badgesEl = document.getElementById('scan-r-badges');
+    badgesEl.innerHTML = '';
+    if (scanLastProduct.nutriscore) {
+        const b = document.createElement('span');
+        b.className = 'scan-r-badge';
+        b.textContent = 'Nutri-Score ' + scanLastProduct.nutriscore.toUpperCase();
+        badgesEl.appendChild(b);
+    }
+
+    // Remplir les selects
+    const catSel = document.getElementById('scan-r-cat');
+    catSel.innerHTML = [
+        {id:'boisson',label:'🍺 Boisson'},
+        {id:'nourriture',label:'🍔 Nourriture'},
+        {id:'autre',label:'📦 Autre'}
+    ].map(c => `<option value="${c.id}"${c.id===catGuess?' selected':''}>${c.label}</option>`).join('');
+
+    // Magasins (on utilise la liste des magasins de l'appli)
+    const magSel = document.getElementById('scan-r-magasin');
+    magSel.innerHTML = '<option value="">Sans magasin</option>';
+
+    // Prix unité par défaut
+    const uniteSel = document.getElementById('scan-r-uniteprix');
+    uniteSel.value = 'unite';
+
+    // Vérifier si le produit existe déjà dans les données
+    const existingProd = data.boissons.find(b => b.codeBarre === ean || b.nom.toLowerCase() === nom.toLowerCase());
+    if (existingProd) {
+        document.getElementById('scan-r-prix').value = existingProd.prix || '';
+        uniteSel.value = existingProd.unite || 'unite';
+        // Sélectionner la catégorie existante
+        catSel.value = existingProd.type || 'autre';
+    } else {
+        document.getElementById('scan-r-prix').value = '';
+        uniteSel.value = 'unite';
+    }
+
+    scanResultCard.style.display = 'block';
+}
+
+document.getElementById('scan-rescan-btn').onclick = () => {
+    scanResultCard.style.display = 'none';
+    startScanCamera();
+};
+
+document.getElementById('scan-confirm-btn').onclick = async () => {
+    if (!scanLastProduct) return;
+    const nom = scanLastProduct.nom;
+    const type = document.getElementById('scan-r-cat').value;
+    const prix = parseFloat(document.getElementById('scan-r-prix').value);
+    const unite = document.getElementById('scan-r-uniteprix').value;
+    const codeBarre = scanLastProduct.ean;
+
+    if (!nom) { alert('❌ Nom du produit manquant'); return; }
+    if (!prix || prix <= 0) { alert('❌ Veuillez saisir un prix valide'); return; }
+    if (data.boissons.some(b => b.codeBarre === codeBarre)) {
+        alert('❌ Ce code-barre est déjà associé à un autre produit');
+        return;
+    }
+
+    // Ajouter le produit dans les données
+    data.boissons.push({
+        id: Date.now(),
+        nom,
+        type,
+        prix,
+        unite,
+        codeBarre,
+        stockInitial: 0,
+        dateAjout: new Date().toISOString()
+    });
+
+    afficherBoissons();
+    mettreAJourSelects();
+    debounceSauvegarde();
+
+    // Mettre à jour le champ correspondant selon le mode
+    if (scanMode === 'achat') {
+        const sel = document.getElementById('achatBoisson');
+        const nouveau = data.boissons.find(b => b.codeBarre === codeBarre);
+        if (sel && nouveau) sel.value = nouveau.id;
+        alert('✅ Produit "' + nom + '" ajouté et sélectionné pour l\'achat');
+    } else if (scanMode === 'boisson') {
+        document.getElementById('boissonCodeBarre').value = codeBarre;
+        alert('✅ Code-barre associé au produit "' + nom + '"');
+    }
+
+    // Fermer le scanner
+    closeScanModal();
+};
+
+// Fonctions d'ouverture/fermeture du scanner
+window.ouvrirScannerModal = function(mode) {
+    scanMode = mode;
+    scanResultCard.style.display = 'none';
+    scanZoneEl.style.display = 'none';
+    scanZoneEl.innerHTML = '';
+    resetScanButtons();
+    scanSetStatus('');
+    document.getElementById('scan-manual-ean').value = '';
+    document.getElementById('scan-modal').style.display = 'flex';
+};
+
+function closeScanModal() {
+    stopScanCamera();
+    document.getElementById('scan-modal').style.display = 'none';
+}
+
+document.getElementById('close-scan-modal').onclick = closeScanModal;
+
+// Fermer le modal en cliquant sur l'overlay
+document.getElementById('scan-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeScanModal();
+});
 
 // ===== INVENTAIRE =====
 function ouvrirInventaireModal() {
@@ -1960,7 +2127,7 @@ Object.assign(window, {
     ajouterOffert, supprimerOffert, activerEditionOffert, annulerEditionOffert, sauvegarderModificationOffert,
     trierVentes, trierAchats, trierApports, trierRemboursements, trierOfferts,
     chargerArchives, voirArchive, fermerArchiveDetailModal, exporterArchive, exporterArchiveOuverte, supprimerArchive,
-    ouvrirScanner, fermerScanner, associerCodeBarreScanne,
+    ouvrirScannerModal, closeScanModal,
     ouvrirInventaireModal, fermerInventaireModal, validerInventaireEtNouvelleSaison,
     afficherLogin, masquerLogin, showAuthMsg
 });
