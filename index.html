@@ -8,65 +8,13 @@
   }
 </script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bar du Pickleball de Mauves</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
-        /* Styles du scanner - version simplifiée et stable */
-        .scan-overlay {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          z-index: 10;
-        }
-        .scan-overlay__mask {
-          position: absolute;
-          background: rgba(0,0,0,0.55);
-        }
-        .scan-overlay__region {
-          position: absolute;
-          width: var(--scan-w);
-          height: var(--scan-h);
-          left: var(--scan-x);
-          top: var(--scan-y);
-        }
-        .scan-overlay__bracket {
-          position: absolute;
-          width: 24px;
-          height: 24px;
-          border-color: #00ff88;
-          border-style: solid;
-          border-width: 0;
-        }
-        .scan-overlay__bracket--tl { top:-1px; left:-1px; border-top-width:3px; border-left-width:3px; border-top-left-radius:4px; }
-        .scan-overlay__bracket--tr { top:-1px; right:-1px; border-top-width:3px; border-right-width:3px; border-top-right-radius:4px; }
-        .scan-overlay__bracket--bl { bottom:-1px; left:-1px; border-bottom-width:3px; border-left-width:3px; border-bottom-left-radius:4px; }
-        .scan-overlay__bracket--br { bottom:-1px; right:-1px; border-bottom-width:3px; border-right-width:3px; border-bottom-right-radius:4px; }
-        .scan-overlay__line {
-          position: absolute;
-          left: 10%;
-          top: 0;
-          width: 80%;
-          height: calc(100% - 2px);
-          animation: scan-sweep 2.5s ease-in-out infinite;
-        }
-        .scan-overlay__line::before {
-          content: '';
-          display: block;
-          width: 100%;
-          height: 2px;
-          background: #00ff88;
-          box-shadow: 0 0 8px #00ff88;
-          border-radius: 1px;
-        }
-        @keyframes scan-sweep {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(100%); }
-        }
-
-        /* Reste des styles */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7f3ee; min-height: 100vh; padding: 10px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 15px; }
@@ -99,6 +47,7 @@
         .edit-btn { color: #f39c12; }
         .delete-btn { color: #e74c3c; }
         .cancel-btn { color: #95a5a6; }
+        /* Bouton valider mobile — vert, visible, tactile */
         .validate-btn {
             background: #27ae60;
             color: white;
@@ -121,6 +70,7 @@
         .edit-input { width: 100%; padding: 8px; border: 2px solid #f39c12; border-radius: 4px; font-size: 16px; }
         .edit-date { width: 100%; padding: 6px; border: 2px solid #f39c12; border-radius: 4px; font-size: 16px; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        #visitorModal { z-index: 10000 !important; }
         .modal-content { background: white; padding: 20px; border-radius: 10px; max-width: 400px; width: 90%; text-align: center; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
         .stock-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; }
@@ -128,6 +78,7 @@
         .stock-out { background: #f8d7da; border-color: #f5c6cb; }
         @media print { .no-print { display: none !important; } body { background: white !important; } .container { box-shadow: none !important; } }
         :root { --bar-ink2:#3d3020; --bar-ylw:#d4890a; --bar-grn:#1e8c45; --bar-grn2:#145e2e; --bar-bdr:#d4c9b5; --bar-s0:#fff; --bar-s1:#f0ebe2; --bar-muted:#7a6a50; }
+        /* LOGIN SCREEN */
         #loginScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:#3d3020; position:fixed; inset:0; z-index:9999; }
         .login-box { background:#fff; border-radius:16px; padding:32px; width:100%; max-width:400px; box-shadow:0 8px 40px rgba(0,0,0,.4); }
         .login-brand { font-family:'Oswald',sans-serif; font-size:26px; letter-spacing:2px; color:#d4890a; text-align:center; margin-bottom:4px; }
@@ -146,6 +97,7 @@
         .btn-visitor-login { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px; border-radius:8px; border:1.5px solid #4a7090; background:linear-gradient(135deg,#1a2a40,#2a3d56); color:#7adcff; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; transition:all .2s; }
         .btn-visitor-login:hover { border-color:#7adcff; }
         #loginMsg { text-align:center; font-size:13px; min-height:18px; margin-bottom:10px; color:#e74c3c; }
+        /* NAV BAR */
         .nav-bar { background:#3d3020; color:#fff; padding:0 16px; height:54px; display:none; align-items:center; gap:12px; position:sticky; top:0; z-index:200; box-shadow:0 3px 16px rgba(0,0,0,.3); }
         .nav-brand { font-family:'Oswald',sans-serif; font-size:20px; letter-spacing:2px; color:#ffd080; flex-shrink:0; }
         .nav-select-wrap { flex:1; max-width:260px; }
@@ -155,76 +107,57 @@
         .nav-r { margin-left:auto; display:flex; gap:8px; align-items:center; }
         .nav-btn { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:#fff; padding:5px 12px; border-radius:6px; cursor:pointer; font-family:'Exo 2',sans-serif; font-size:12px; font-weight:600; transition:background .15s; white-space:nowrap; }
         .nav-btn:hover { background:rgba(255,255,255,.22); }
+        /* Vendeur : cacher les options non-ventes dans le select */
         .saisie-mode .nav-select option:not([value="ventes"]) { display:none !important; }
+        /* readonly : on bloque uniquement les boutons d'action de l'appli, pas la navigation ni la connexion */
         .readonly-mode .section button { opacity:0.5; pointer-events:none; }
         .readonly-mode .section input,
         .readonly-mode .section select { opacity:0.5; pointer-events:none; }
+        /* Exceptions : les onglets restent cliquables en lecture seule */
         .readonly-mode .tabs button { opacity:1 !important; pointer-events:auto !important; }
+        /* La top-bar, les modals et le loginPanel restent toujours actifs */
         .top-bar button, .top-bar input { pointer-events:auto !important; opacity:1 !important; }
         #loginPanel, #loginPanel * { pointer-events:auto !important; opacity:1 !important; }
         .modal, .modal * { pointer-events:auto !important; opacity:1 !important; }
+        /* Vendeur : seul l'onglet Ventes est accessible */
+        .saisie-mode .nav-select option:not([value="ventes"]) { display:none !important; }
+        /* Budget */
 
-        /* SCANNER */
-        .field-with-scan { display:flex; gap:8px; align-items:stretch; }
-        .field-with-scan select, .field-with-scan input { flex:1; min-width:0; }
-        .btn-scan { background:#17a2b8; color:#fff; border:none; border-radius:8px; width:auto; flex-shrink:0; padding:0 16px; font-size:18px; cursor:pointer; min-height:48px; touch-action:manipulation; }
-        .btn-scan:active { background:#128293; }
 
-        #scan-modal .modal-content { max-width:440px; }
-        #scan-zone {
-            background: #1a1a18;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-            min-height: 200px;
-            aspect-ratio: 4/3;
-            margin-top: 8px;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #scan-zone video {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover;
-            display: block;
-        }
-        #scan-zone .drawingBuffer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-        #scan-zone .scan-placeholder {
-            color: #666;
-            font-size: 14px;
-            text-align: center;
-            padding: 20px;
-        }
-        #scan-status { font-size:13px; color:#888; min-height:18px; margin-top:10px; text-align:center; }
-        #scan-result-card { display:none; margin-top:1rem; border-top:1px dashed #d4c9b5; padding-top:1rem; text-align:left; }
-        #scan-result-card .scan-r-row { display:flex; gap:.8rem; margin-bottom:.7rem; align-items:center; }
-        #scan-result-card .scan-r-img { width:64px; height:64px; object-fit:contain; background:#fff; border:1px solid #d4c9b5; border-radius:8px; flex-shrink:0; }
-        #scan-result-card .scan-r-nom { font-weight:700; font-size:.95rem; }
-        #scan-result-card .scan-r-marque { color:#7a6a50; font-size:.8rem; margin-top:.15rem; }
-        #scan-result-card .scan-r-badges { margin-top:.3rem; display:flex; gap:.3rem; flex-wrap:wrap; }
-        #scan-result-card .scan-r-badge {
-            font-size:.68rem; font-weight:700; padding:.15rem .4rem; border-radius:4px;
-            background:#d8f3dc; color:#2d6a4f;
-        }
-        #scan-result-card .frow { display:flex; gap:.5rem; flex-wrap:wrap; }
-        #scan-result-card .frow>* { flex:1; min-width:100px; }
+        /* LOGIN SCREEN */
+        #loginScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:#3d3020; position:fixed; inset:0; z-index:9999; }
+        .login-box { background:#fff; border-radius:16px; padding:32px; width:100%; max-width:400px; box-shadow:0 8px 40px rgba(0,0,0,.4); }
+        .login-brand { font-family:'Oswald',sans-serif; font-size:26px; letter-spacing:2px; color:#d4890a; text-align:center; margin-bottom:4px; }
+        .login-sub { text-align:center; font-size:13px; color:#7a6a50; margin-bottom:24px; }
+        .login-form { display:flex; flex-direction:column; gap:12px; }
+        .login-form label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#7a6a50; margin-bottom:4px; }
+        .login-form input { width:100%; padding:10px 13px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; color:#1a1410; outline:none; box-sizing:border-box; }
+        .login-form input:focus { border-color:#1e8c45; }
+        .btn-login-main { width:100%; padding:12px; border:none; border-radius:8px; background:#1e8c45; color:#fff; font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:.8px; cursor:pointer; text-transform:uppercase; transition:background .15s; }
+        .btn-login-main:hover { background:#145e2e; }
+        .btn-google-bar { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:10px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; color:#1a1410; cursor:pointer; transition:background .15s; }
+        .btn-google-bar:hover { background:#e8e1d5; }
+        .login-divider { text-align:center; font-size:12px; color:#b0a090; position:relative; margin:2px 0; }
+        .login-divider::before, .login-divider::after { content:''; position:absolute; top:50%; width:42%; height:1px; background:#d4c9b5; }
+        .login-divider::before { left:0; } .login-divider::after { right:0; }
+        .btn-visitor-login { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px; border-radius:8px; border:1.5px solid #4a7090; background:linear-gradient(135deg,#1a2a40,#2a3d56); color:#7adcff; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; transition:all .2s; }
+        .btn-visitor-login:hover { border-color:#7adcff; }
+        #loginMsg { text-align:center; font-size:13px; min-height:18px; margin-bottom:10px; }
+        /* NAV BAR */
+        .nav-bar { background:#3d3020; color:#fff; padding:0 16px; height:54px; align-items:center; gap:12px; position:sticky; top:0; z-index:200; box-shadow:0 3px 16px rgba(0,0,0,.3); }
+        .nav-brand { font-family:'Oswald',sans-serif; font-size:20px; letter-spacing:2px; color:#ffd080; flex-shrink:0; }
+        .nav-select-wrap { flex:1; max-width:260px; }
+        .nav-select { width:100%; padding:7px 30px 7px 12px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25); border-radius:8px; color:#fff; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; cursor:pointer; outline:none; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='%23fff' d='M5 7L0 0h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
+        .nav-select option { background:#3d3020; color:#fff; }
+        .nav-user { font-size:12px; color:rgba(255,255,255,.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
+        .nav-r { margin-left:auto; display:flex; gap:8px; align-items:center; }
+        .nav-btn { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:#fff; padding:5px 12px; border-radius:6px; cursor:pointer; font-family:'Exo 2',sans-serif; font-size:12px; font-weight:600; transition:background .15s; white-space:nowrap; }
+        .nav-btn:hover { background:rgba(255,255,255,.22); }
+        /* container style */
+        .container { background:#f7f3ee !important; box-shadow:none !important; border-radius:0 !important; padding:0 !important; }
+        .section { display:none; background:#fff; border-radius:10px; margin:16px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
 
-        .btn-primary { background:#2d6a4f; color:#fff; }
-        .btn-primary:hover { background:#40916c; }
-        .btn-outline { background:transparent; border:1.5px solid #d4c9b5; color:#5c5c52; }
-        .btn-outline:hover { border-color:#b0a090; background:#f0ebe2; }
-        .btn-sm { padding:.38rem .7rem; font-size:.78rem; border-radius:8px; }
-        .btn-icon { padding:.5rem; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; }
-
+        /* ===== RESPONSIVE MOBILE ===== */
         @media (max-width: 640px) {
             body { padding:0; }
             .nav-bar { height:auto; flex-wrap:wrap; padding:8px 10px; gap:8px; }
@@ -242,6 +175,7 @@
             .summary-card h3 { font-size:11px; }
             .summary-card p { font-size:16px; }
             .stock-card { padding:10px; }
+            .stock-card > div { flex-wrap:wrap; }
             table { font-size:13px; }
             th, td { padding:8px 5px; }
             .icon-btn { font-size:16px; padding:6px; }
@@ -249,33 +183,32 @@
             .login-box { padding:22px 18px; }
             .top-bar { gap:6px; }
             .top-bar button, .top-bar .btn-small { font-size:12px; padding:9px 10px; }
-            .btn-scan { padding:0 14px; min-width:48px; }
-            #scan-zone { min-height:200px; }
-            #scan-result-card .frow { flex-direction:column; }
-            #scan-result-card .frow>* { min-width:unset; }
         }
         @media (max-width: 400px) {
             .summary-grid { grid-template-columns: 1fr 1fr; }
             .nav-brand { font-size:14px; }
         }
-        @media (max-width: 480px) {
-            .modal-buttons { flex-direction:column; }
-            .modal-buttons button { width:100%; }
-            .icon-btn { min-width:40px; min-height:40px; font-size:17px; }
-            .action-icons { gap:8px; }
-            input, select { padding:13px 12px; font-size:16px; }
-            label { font-size:13px; }
-            .form-group { margin-bottom:14px; }
-            #utilisateurs .form-group { min-width:100% !important; }
-            #utilisateurs > div > div[style*="align-items:flex-end"] { align-items:stretch !important; }
+        /* ===== SCANNER CODE-BARRE ===== */
+        .field-with-scan { display:flex; gap:8px; align-items:stretch; }
+        .field-with-scan select, .field-with-scan input { flex:1; min-width:0; }
+        .btn-scan { background:#17a2b8; color:#fff; border:none; border-radius:8px; width:auto; flex-shrink:0; padding:0 16px; font-size:18px; cursor:pointer; min-height:48px; touch-action:manipulation; }
+        .btn-scan:active { background:#128293; }
+        #scannerReader { width:100%; min-height:230px; background:#000; border-radius:10px; overflow:hidden; }
+        #scannerReader video { width:100% !important; border-radius:10px; }
+        #scannerAssignZone { background:#fff3cd; border:1px solid #ffeaa7; border-radius:8px; padding:12px; }
+        #scannerAssignZone select { margin-top:4px; }
+        .inv-row { display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid #e5e0d5; border-radius:8px; padding:10px 12px; }
+        .inv-row input { width:90px; padding:8px; border:2px solid #ddd; border-radius:6px; font-size:16px; text-align:center; }
+        @media (max-width: 640px) {
+            .btn-scan { padding:0 14px; min-width:48px; }
+            .inv-row { flex-wrap:wrap; }
+            .inv-row input { width:100%; }
+            #scannerReader { min-height:200px; }
         }
-        ::-webkit-scrollbar{width:4px}
-        ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:#d4c9b5;border-radius:4px}
-    </style>
+        </style>
 </head>
 <body>
-<!-- ===== Écran de connexion ===== -->
+<!-- Écran de connexion style Tournoi Pickleball -->
 <div id="loginScreen">
     <div class="login-box">
         <div class="login-brand">🍺 Bar Pickleball</div>
@@ -296,6 +229,7 @@
                 <i class="fab fa-google" style="color:#4285f4;font-size:16px;"></i> Connexion Google
             </button>
             <div class="login-divider">ou</div>
+            <!-- Formulaire visiteur inline dans le loginScreen -->
             <div id="visitorForm" style="display:none;flex-direction:column;gap:10px;">
                 <input type="text" id="visitorCodeInput" placeholder="• • • • • •" maxlength="6"
                     style="width:100%;padding:14px;border:2px solid #4a7090;border-radius:10px;font-size:28px;text-align:center;letter-spacing:10px;font-weight:700;background:#1a2a40;color:#7adcff;outline:none;box-sizing:border-box;"
@@ -315,7 +249,7 @@
     </div>
 </div>
 
-<!-- ===== Nav Bar ===== -->
+<!-- Nav Bar style Tournoi -->
 <div class="nav-bar no-print" id="navBar">
     <div class="nav-brand">🍺 Bar Pickleball</div>
     <div class="nav-select-wrap">
@@ -339,7 +273,6 @@
     </div>
 </div>
 
-<!-- ===== Container ===== -->
 <div class="container" style="display:none;">
     <div class="top-bar no-print" style="display:none;">
         <button class="btn-small btn-success" onclick="sauvegarderDonnees()"><i class="fas fa-save"></i> Sauvegarder</button>
@@ -352,7 +285,7 @@
         <span id="loginPanelMsg" style="font-size:12px;color:#e74c3c;"></span>
     </div>
 
-    <!-- ===== VENTES ===== -->
+    <!-- Section Ventes -->
     <div id="ventes" class="section" style="display:none;">
         <h2>Enregistrer une vente</h2>
         <div class="form-group"><label>Produit</label><select id="venteBoisson"></select></div>
@@ -362,13 +295,17 @@
         <h3>Historique des ventes</h3>
         <div class="mobile-table">
             <table id="tableVentes">
-                <thead><tr><th onclick="trierVentes()">Date <span class="sort-indicator">▼</span></th><th>Produit</th><th>Qté</th><th>Prix Unitaire</th><th>Total</th><th class="no-print">Actions</th></tr></thead>
+                <thead><tr>
+                    <th onclick="trierVentes()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Produit</th><th>Qté</th><th>Prix Unitaire</th><th>Total</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
                 <tbody id="tbodyVentes"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- ===== OFFERTES ===== -->
+    <!-- Section Consommations offertes -->
     <div id="offertes" class="section" style="display:none;">
         <h2>🎁 Consommations offertes</h2>
         <div class="form-group"><label>Produit offert</label><select id="offertBoisson"></select></div>
@@ -379,13 +316,17 @@
         <h3>Historique des consommations offertes</h3>
         <div class="mobile-table">
             <table id="tableOfferts">
-                <thead><tr><th onclick="trierOfferts()">Date <span class="sort-indicator">▼</span></th><th>Produit</th><th>Qté</th><th>Valeur (vente)</th><th>Coût (achat)</th><th>Motif</th><th class="no-print">Actions</th></tr></thead>
+                <thead><tr>
+                    <th onclick="trierOfferts()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Produit</th><th>Qté</th><th>Valeur (vente)</th><th>Coût (achat)</th><th>Motif</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
                 <tbody id="tbodyOfferts"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- ===== STOCK ===== -->
+    <!-- Section Stock -->
     <div id="stock" class="section" style="display:none;">
         <h2>📦 État du Stock</h2>
         <div class="summary-grid">
@@ -398,14 +339,14 @@
         <div id="listeStock"></div>
     </div>
 
-    <!-- ===== ACHATS ===== -->
+    <!-- Section Achats -->
     <div id="achats" class="section" style="display:none;">
         <h2>Enregistrer un achat</h2>
         <div class="form-group">
             <label>Produit</label>
             <div class="field-with-scan">
                 <select id="achatBoisson"></select>
-                <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScannerModal('achat')"><i class="fas fa-barcode"></i></button>
+                <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScanner('achat')"><i class="fas fa-barcode"></i></button>
             </div>
         </div>
         <div class="form-group"><label>Quantité</label><input type="number" id="achatQuantite" placeholder="Ex: 24" min="1" inputmode="numeric"></div>
@@ -415,13 +356,17 @@
         <h3>Historique des achats</h3>
         <div class="mobile-table">
             <table id="tableAchats">
-                <thead><tr><th onclick="trierAchats()">Date <span class="sort-indicator">▼</span></th><th>Produit</th><th>Qté</th><th>Prix Unitaire</th><th>Total</th><th class="no-print">Actions</th></tr></thead>
+                <thead><tr>
+                    <th onclick="trierAchats()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Produit</th><th>Qté</th><th>Prix Unitaire</th><th>Total</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
                 <tbody id="tbodyAchats"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- ===== PRODUITS ===== -->
+    <!-- Section Produits -->
     <div id="boissons" class="section" style="display:none;">
         <h2>📦 Gérer les produits</h2>
         <div class="form-group"><label>Nom du produit</label><input type="text" id="boissonNom" placeholder="Ex: Bière blonde, Galette saucisse, Bonbons"></div>
@@ -445,20 +390,23 @@
             <label>Code-barre (optionnel)</label>
             <div class="field-with-scan">
                 <input type="text" id="boissonCodeBarre" placeholder="Scannez ou saisissez le code" inputmode="numeric">
-                <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScannerModal('boisson')"><i class="fas fa-barcode"></i></button>
+                <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScanner('boisson')"><i class="fas fa-barcode"></i></button>
             </div>
         </div>
         <button class="no-print" onclick="ajouterBoisson()"><i class="fas fa-plus"></i> Ajouter le produit</button>
         <h3>Liste des produits</h3>
         <div class="mobile-table">
             <table id="tableBoissons">
-                <thead><tr><th>Produit</th><th>Type</th><th>Prix</th><th>Unité</th><th>Code-barre</th><th class="no-print">Actions</th></tr></thead>
+                <thead><tr>
+                    <th>Produit</th><th>Type</th><th>Prix</th><th>Unité</th><th>Code-barre</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
                 <tbody id="tbodyBoissons"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- ===== BILAN ===== -->
+    <!-- Section Bilan -->
     <div id="bilan" class="section" style="display:none;">
         <h2>📊 Bilan financier</h2>
         <div class="summary-grid">
@@ -476,24 +424,33 @@
         <h3>Détails par contributeur</h3>
         <div class="mobile-table">
             <table id="tableContributeurs">
-                <thead><tr><th>Contributeur</th><th>Total Apporté</th><th>Total Remboursé</th><th>Reste à Rembourser</th></tr></thead>
+                <thead><tr>
+                    <th>Contributeur</th><th>Total Apporté</th><th>Total Remboursé</th><th>Reste à Rembourser</th>
+                </tr></thead>
                 <tbody id="tbodyContributeurs"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- ===== ARCHIVES ===== -->
+    <!-- Section Archives -->
     <div id="archives" class="section" style="display:none;">
         <h2>🗄️ Archives des budgets précédents</h2>
         <p style="color:#666;font-size:13px;margin-bottom:12px;">Chaque fois que le bar est réinitialisé pour un nouveau budget, l'ancien est conservé ici avec son bilan complet.</p>
         <div id="listeArchives"><p style="color:#999;">Chargement...</p></div>
     </div>
+
+    <!-- Modal Détail Archive -->
     <div id="archiveDetailModal" class="modal no-print">
         <div class="modal-content" style="max-width:600px;max-height:85vh;overflow-y:auto;text-align:left;">
             <h3 id="archiveDetailTitre" style="margin-bottom:12px;">Budget</h3>
             <div class="summary-grid" id="archiveDetailGrid"></div>
             <h4 style="margin:16px 0 8px;">Détails par contributeur</h4>
-            <div class="mobile-table"><table><thead><tr><th>Contributeur</th><th>Apporté</th><th>Remboursé</th><th>Reste</th></tr></thead><tbody id="archiveDetailContributeurs"></tbody></table></div>
+            <div class="mobile-table">
+                <table>
+                    <thead><tr><th>Contributeur</th><th>Apporté</th><th>Remboursé</th><th>Reste</th></tr></thead>
+                    <tbody id="archiveDetailContributeurs"></tbody>
+                </table>
+            </div>
             <div class="modal-buttons">
                 <button class="btn-info btn-small" style="width:auto;" onclick="exporterArchiveOuverte()"><i class="fas fa-file-export"></i> Exporter</button>
                 <button class="btn-warning btn-small" style="width:auto;" onclick="fermerArchiveDetailModal()"><i class="fas fa-times"></i> Fermer</button>
@@ -501,7 +458,7 @@
         </div>
     </div>
 
-    <!-- ===== APPORTS ===== -->
+    <!-- Section Apports -->
     <div id="apports" class="section" style="display:none;">
         <h2>Enregistrer un apport</h2>
         <div class="form-group"><label>Nom du contributeur</label><input type="text" id="apportNom" placeholder="Ex: Jean Dupont"></div>
@@ -511,13 +468,17 @@
         <h3>Historique des apports</h3>
         <div class="mobile-table">
             <table id="tableApports">
-                <thead><tr><th onclick="trierApports()">Date <span class="sort-indicator">▼</span></th><th>Nom</th><th>Montant</th><th class="no-print">Actions</th></tr></thead>
+                <thead><tr>
+                    <th onclick="trierApports()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Nom</th><th>Montant</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
                 <tbody id="tbodyApports"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- ===== REMBOURSEMENTS ===== -->
+    <!-- Section Remboursements -->
     <div id="remboursements" class="section" style="display:none;">
         <h2>Rembourser un apport</h2>
         <div class="form-group"><label>Contributeur</label><select id="remboursementContributeur"></select></div>
@@ -526,13 +487,17 @@
         <h3>Historique des remboursements</h3>
         <div class="mobile-table">
             <table id="tableRemboursements">
-                <thead><tr><th onclick="trierRemboursements()">Date <span class="sort-indicator">▼</span></th><th>Nom</th><th>Montant</th><th class="no-print">Actions</th></tr></thead>
+                <thead><tr>
+                    <th onclick="trierRemboursements()">Date <span class="sort-indicator">▼</span></th>
+                    <th>Nom</th><th>Montant</th>
+                    <th class="no-print">Actions</th>
+                </tr></thead>
                 <tbody id="tbodyRemboursements"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- ===== UTILISATEURS ===== -->
+    <!-- Section Utilisateurs (admin only) -->
     <div id="utilisateurs" class="section no-print" style="display:none;">
         <h2>👥 Gestion des accès</h2>
         <div style="background:#e8f4fd;border:1px solid #bee3f8;border-radius:10px;padding:16px;margin-bottom:20px;">
@@ -570,7 +535,7 @@
     </div>
 </div>
 
-<!-- ===== Modals ===== -->
+<!-- Modal Reset -->
 <div id="resetModal" class="modal no-print">
     <div class="modal-content" style="text-align:left;">
         <h3 style="text-align:center;">Démarrer un nouveau budget</h3>
@@ -586,85 +551,43 @@
     </div>
 </div>
 
-<!-- ===== SCANNER MODAL ===== -->
-<div id="scan-modal" class="modal no-print">
+<!-- Modal Scanner code-barre -->
+<div id="scannerModal" class="modal no-print">
     <div class="modal-content" style="max-width:440px;text-align:center;">
         <h3 style="text-align:center;">📷 Scanner un code-barre</h3>
-        <div id="scan-zone">
-            <div class="scan-placeholder">🔍 Cliquez sur "Démarrer" pour activer la caméra</div>
+        <div id="scannerReader"></div>
+        <p id="scannerStatus" style="font-size:13px;color:#888;min-height:18px;margin-top:10px;">Initialisation...</p>
+        <div id="scannerAssignZone" style="display:none;text-align:left;margin-top:10px;">
+            <p style="font-size:13px;color:#856404;margin-bottom:8px;">Code inconnu : <strong id="scannerCodeInconnu"></strong></p>
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Associer ce code à un produit existant</label>
+            <select id="scannerAssignSelect" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;"></select>
+            <button class="btn-success" style="margin-top:8px;" onclick="associerCodeBarreScanne()"><i class="fas fa-link"></i> Associer et sélectionner</button>
         </div>
-        <p id="scan-status" style="font-size:13px;color:#888;min-height:18px;margin-top:10px;"></p>
-
-        <div style="display:flex;gap:.5rem;margin-top:.8rem;flex-wrap:wrap;">
-            <button class="btn btn-primary btn-full" id="scan-start-btn" style="padding:.7rem;flex:2;min-width:120px;">📷 Démarrer</button>
-            <button class="btn btn-outline btn-sm" id="scan-stop-btn" style="flex:none;min-width:60px;">Arrêter</button>
-        </div>
-
-        <input type="text" id="scan-manual-ean" placeholder="Ou saisir un code-barres (EAN)" inputmode="numeric" style="margin-top:.6rem;padding:10px;border:1.5px solid #d4c9b5;border-radius:8px;width:100%;font-size:16px;">
-
-        <div id="scan-result-card">
-            <div class="scan-r-row">
-                <img id="scan-r-img" src="" class="scan-r-img" alt="">
-                <div>
-                    <div id="scan-r-nom" class="scan-r-nom"></div>
-                    <div id="scan-r-marque" class="scan-r-marque"></div>
-                    <div id="scan-r-badges" class="scan-r-badges"></div>
-                </div>
-            </div>
-            <div class="frow" style="margin-bottom:.7rem;">
-                <select id="scan-r-cat" style="flex:1;">
-                    <option value="boisson">🍺 Boisson</option>
-                    <option value="nourriture">🍔 Nourriture</option>
-                    <option value="autre">📦 Autre</option>
-                </select>
-            </div>
-            <div class="frow" style="margin-bottom:.7rem;">
-                <input type="number" step="0.01" min="0" id="scan-r-prix" placeholder="Prix (€)" style="flex:1;">
-                <select id="scan-r-uniteprix" style="flex:none;width:auto;min-width:80px;">
-                    <option value="unite">Unité</option>
-                    <option value="pack">Pack</option>
-                    <option value="kg">kg</option>
-                    <option value="portion">Portion</option>
-                </select>
-            </div>
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-                <button class="btn btn-outline btn-sm" id="scan-rescan-btn" style="flex:1;">🔄 Rescanner</button>
-                <button class="btn btn-primary btn-sm" id="scan-confirm-btn" style="flex:1;">✅ Ajouter</button>
-            </div>
-        </div>
-
-        <div style="margin-top:1rem;">
-            <button class="btn btn-outline btn-full" id="close-scan-modal">Fermer</button>
+        <div class="modal-buttons">
+            <button class="btn-warning" onclick="fermerScanner()"><i class="fas fa-times"></i> Fermer</button>
         </div>
     </div>
 </div>
 
-<!-- ===== INVENTAIRE MODAL ===== -->
+<!-- Modal Inventaire de fin de saison -->
 <div id="inventaireModal" class="modal no-print">
     <div class="modal-content" style="text-align:left;max-width:520px;max-height:85vh;overflow-y:auto;">
         <h3 style="text-align:center;">🗓️ Inventaire de fin de saison</h3>
-        <p style="margin:12px 0;font-size:14px;color:#555;">Comptez le stock physique restant de chaque produit...</p>
+        <p style="margin:12px 0;font-size:14px;color:#555;">
+            Comptez le stock physique restant de chaque produit et corrigez si besoin la quantité théorique ci-dessous.
+            La saison actuelle sera <strong>archivée</strong> (comme une réinitialisation classique), puis une nouvelle saison démarrera avec les quantités que vous validez ici déjà en stock — sans qu'elles soient comptées comme un nouvel achat.
+        </p>
         <div class="form-group">
-            <label for="inventaireArchiveNom">Nom de la saison qui se termine</label>
+            <label for="inventaireArchiveNom">Nom de la saison qui se termine (pour l'historique)</label>
             <input type="text" id="inventaireArchiveNom" placeholder="Ex: Saison 2025-2026">
         </div>
         <div id="listeInventaire" style="display:flex;flex-direction:column;gap:8px;margin:12px 0;"></div>
         <div class="modal-buttons">
-            <button class="btn-success" onclick="validerInventaireEtNouvelleSaison()"><i class="fas fa-check"></i> Valider</button>
+            <button class="btn-success" onclick="validerInventaireEtNouvelleSaison()"><i class="fas fa-check"></i> Valider et démarrer la nouvelle saison</button>
             <button class="btn-warning" onclick="fermerInventaireModal()"><i class="fas fa-times"></i> Annuler</button>
         </div>
     </div>
 </div>
-
-<script type="importmap">
-{
-    "imports": {
-        "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-        "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
-        "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"
-    }
-}
-</script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -691,278 +614,9 @@ let data = { apports: [], boissons: [], achats: [], ventes: [], remboursements: 
 let visitorCode = null;
 let saveTimeout, isSaving = false;
 let triApports = 'desc', triAchats = 'desc', triVentes = 'desc', triRemboursements = 'desc', triOfferts = 'desc';
+let html5QrCode = null, scannerContext = null, scannerDernierCode = null;
 
-// ============================================================
-// SCANNER - Version simplifiée avec QuaggaJS (plus fiable)
-// ============================================================
-let scanMode = null;
-let scanProcessing = false;
-let scanLastProduct = null;
-let scannerRunning = false;
-
-function scanSetStatus(msg, isError) {
-    const el = document.getElementById('scan-status');
-    if (el) { el.textContent = msg || ''; el.style.color = isError ? '#c0392b' : '#888'; }
-}
-
-function resetScanUI() {
-    const startBtn = document.getElementById('scan-start-btn');
-    if (startBtn) startBtn.textContent = '📷 Démarrer';
-    const zone = document.getElementById('scan-zone');
-    if (zone) {
-        zone.innerHTML = '<div class="scan-placeholder">🔍 Cliquez sur "Démarrer" pour activer la caméra</div>';
-    }
-    scannerRunning = false;
-    // Arrêter Quagga
-    if (window.Quagga) {
-        try {
-            Quagga.offDetected();
-            Quagga.stop();
-        } catch(e) {}
-    }
-}
-
-async function startScanCamera() {
-    resetScanUI();
-    
-    // Vérifier si Quagga est chargé
-    if (typeof Quagga === 'undefined') {
-        scanSetStatus('⏳ Chargement de la bibliothèque scanner...', false);
-        // Charger QuaggaJS depuis CDN
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js';
-        script.onload = () => {
-            scanSetStatus('📷 Bibliothèque chargée, démarrage...', false);
-            startQuagga();
-        };
-        script.onerror = () => {
-            scanSetStatus('❌ Erreur de chargement de la bibliothèque', true);
-        };
-        document.head.appendChild(script);
-        return;
-    }
-    
-    startQuagga();
-}
-
-function startQuagga() {
-    const zone = document.getElementById('scan-zone');
-    zone.innerHTML = '';
-    zone.style.display = 'block';
-    const rect = zone.getBoundingClientRect();
-    zone.style.height = Math.round(rect.width * 0.75) + 'px';
-    
-    document.getElementById('scan-start-btn').textContent = '⏳ Démarrage...';
-    scanSetStatus('📷 Initialisation de la caméra...', false);
-    
-    // Configurer Quagga
-    const config = {
-        inputStream: {
-            name: "Live",
-            type: "LiveStream",
-            target: zone,
-            constraints: {
-                facingMode: "environment",
-                width: { ideal: 640 },
-                height: { ideal: 480 }
-            }
-        },
-        decoder: {
-            readers: ["ean_reader", "ean_8_reader", "code_128_reader", "code_39_reader"],
-            multiple: false
-        },
-        locator: {
-            patchSize: "medium",
-            halfSample: true
-        }
-    };
-    
-    Quagga.init(config, function(err) {
-        if (err) {
-            console.error('Quagga init error:', err);
-            scanSetStatus('❌ Erreur d\'initialisation: ' + err, true);
-            document.getElementById('scan-start-btn').textContent = '📷 Démarrer';
-            return;
-        }
-        
-        Quagga.start();
-        scannerRunning = true;
-        document.getElementById('scan-start-btn').textContent = '⏳ Scannage...';
-        scanSetStatus('🔍 Visez un code-barres...', false);
-        
-        Quagga.onDetected(function(result) {
-            if (result && result.codeResult && result.codeResult.code) {
-                const code = result.codeResult.code;
-                if (!scanProcessing) {
-                    onScanDetected(code);
-                }
-            }
-        });
-    });
-}
-
-function stopScanCamera() {
-    if (window.Quagga) {
-        try {
-            Quagga.offDetected();
-            Quagga.stop();
-        } catch(e) {}
-    }
-    resetScanUI();
-    scanSetStatus('🛑 Caméra arrêtée', false);
-}
-
-// Saisie manuelle
-document.getElementById('scan-manual-ean').addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
-        const val = e.target.value.trim();
-        if (val) await onScanDetected(val);
-    }
-});
-
-async function onScanDetected(ean) {
-    if (scanProcessing) return;
-    scanProcessing = true;
-    if (navigator.vibrate) navigator.vibrate(80);
-    stopScanCamera();
-    scanSetStatus('🔍 Recherche du produit ' + ean + '…', false);
-
-    try {
-        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`);
-        const data = await res.json();
-        if (data.status !== 1) {
-            scanSetStatus('⚠️ Produit non trouvé, saisie manuelle', true);
-            renderScanResult(ean, { product_name: 'Produit ' + ean });
-            scanProcessing = false;
-            return;
-        }
-        renderScanResult(ean, data.product);
-        scanSetStatus('', false);
-    } catch(err) {
-        scanSetStatus('❌ Erreur réseau, saisie manuelle', true);
-        renderScanResult(ean, { product_name: 'Produit ' + ean });
-    }
-    scanProcessing = false;
-}
-
-function guessCategorieFromProduct(p) {
-    const hay = ((p.categories || '') + ' ' + (p.product_name_fr || p.product_name || '')).toLowerCase();
-    if (/bière|vin|whisky|vodka|rhum|pastis|champagne|cidre|porto|muscat|tequila|gin|limonade|soda|cola|jus|eau|thé|sirop|energisant/.test(hay)) return 'boisson';
-    if (/nourriture|plat|sauce|pâte|riz|pomme de terre|frite|gâteau|biscuit|pain|viennoiserie|céréale|chocolat|bonbon|confiture|miel|nutella|beurre|huile|vinaigre|sel|poivre|épice/.test(hay)) return 'nourriture';
-    return 'autre';
-}
-
-function renderScanResult(ean, p) {
-    const nom = p.product_name_fr || p.product_name || ('Produit ' + ean);
-    const catGuess = guessCategorieFromProduct(p);
-    scanLastProduct = {
-        nom,
-        marque: p.brands || '',
-        imageUrl: p.image_front_small_url || p.image_url || '',
-        ean,
-        nutriscore: p.nutriscore_grade || '',
-        catGuess
-    };
-
-    document.getElementById('scan-r-img').src = scanLastProduct.imageUrl || '';
-    document.getElementById('scan-r-nom').textContent = nom;
-    document.getElementById('scan-r-marque').textContent = scanLastProduct.marque || '—';
-    document.getElementById('scan-r-cat').value = catGuess;
-
-    const existingProd = data.boissons.find(b => b.codeBarre === ean || b.nom.toLowerCase() === nom.toLowerCase());
-    if (existingProd) {
-        document.getElementById('scan-r-prix').value = existingProd.prix || '';
-        document.getElementById('scan-r-uniteprix').value = existingProd.unite || 'unite';
-    } else {
-        document.getElementById('scan-r-prix').value = '';
-        document.getElementById('scan-r-uniteprix').value = 'unite';
-    }
-
-    document.getElementById('scan-result-card').style.display = 'block';
-}
-
-// Confirmer l'ajout
-document.getElementById('scan-confirm-btn').onclick = function() {
-    if (!scanLastProduct) return;
-    const nom = scanLastProduct.nom;
-    const type = document.getElementById('scan-r-cat').value;
-    const prix = parseFloat(document.getElementById('scan-r-prix').value);
-    const unite = document.getElementById('scan-r-uniteprix').value;
-    const codeBarre = scanLastProduct.ean;
-
-    if (!nom || !prix || prix <= 0) {
-        alert('Veuillez remplir le nom et le prix');
-        return;
-    }
-
-    // Vérifier si le produit existe déjà
-    const existing = data.boissons.find(b => b.codeBarre === codeBarre || b.nom.toLowerCase() === nom.toLowerCase());
-    if (existing) {
-        alert('⚠️ Ce produit existe déjà dans la base.');
-        document.getElementById('scan-result-card').style.display = 'none';
-        document.getElementById('scan-modal').style.display = 'none';
-        return;
-    }
-
-    // Ajouter le produit
-    const newId = Date.now();
-    data.boissons.push({
-        id: newId,
-        nom: nom,
-        type: type || 'boisson',
-        prix: prix,
-        unite: unite || 'unite',
-        codeBarre: codeBarre,
-        stockInitial: 0,
-        dateAjout: new Date().toISOString()
-    });
-
-    afficherBoissons();
-    mettreAJourSelects();
-    debounceSauvegarde();
-
-    if (scanMode === 'achat') {
-        const sel = document.getElementById('achatBoisson');
-        if (sel) {
-            const nouveau = data.boissons.find(b => b.codeBarre === codeBarre);
-            if (nouveau) sel.value = nouveau.id;
-        }
-        alert('✅ Produit "' + nom + '" ajouté et sélectionné pour l\'achat');
-    } else if (scanMode === 'boisson') {
-        document.getElementById('boissonCodeBarre').value = codeBarre;
-        alert('✅ Code-barre associé au produit "' + nom + '"');
-    }
-
-    document.getElementById('scan-result-card').style.display = 'none';
-    document.getElementById('scan-modal').style.display = 'none';
-};
-
-// Boutons
-document.getElementById('scan-start-btn').onclick = startScanCamera;
-document.getElementById('scan-stop-btn').onclick = stopScanCamera;
-document.getElementById('scan-rescan-btn').onclick = function(){
-    document.getElementById('scan-result-card').style.display = 'none';
-    startScanCamera();
-};
-document.getElementById('close-scan-modal').onclick = function(){
-    stopScanCamera();
-    document.getElementById('scan-modal').style.display = 'none';
-};
-
-// Fonction d'ouverture
-window.ouvrirScannerModal = function(mode) {
-    scanMode = mode;
-    document.getElementById('scan-result-card').style.display = 'none';
-    resetScanUI();
-    scanSetStatus('');
-    document.getElementById('scan-manual-ean').value = '';
-    document.getElementById('scan-modal').style.display = 'flex';
-};
-
-// ============================================================
-// TOUTES LES FONCTIONS DE GESTION DES DONNÉES
-// ============================================================
-
+// ===== SAUVEGARDE =====
 function mettreAJourStatutSauvegarde(statut) {
     const el = document.getElementById('saveStatus');
     if (el) { el.textContent = statut.message; el.className = `save-status ${statut.classe}`; }
@@ -1044,6 +698,9 @@ async function reinitialiserDonnees() {
     const nomInput = document.getElementById('resetArchiveNom');
     const nom = (nomInput && nomInput.value.trim()) || ('Budget jusqu\'au ' + new Date().toLocaleDateString('fr-FR'));
     try {
+        // 1. Archiver les données actuelles (sans le catalogue produits, qui reste actif)
+        // Stocké comme document dans la collection "buvette" existante (déjà autorisée par les règles Firestore),
+        // avec un id préfixé "archive_" et un champ type pour le distinguer du document principal "data".
         const archiveId = 'archive_' + Date.now();
         const archive = {
             type: 'archive',
@@ -1051,9 +708,10 @@ async function reinitialiserDonnees() {
             dateArchivage: new Date().toISOString(),
             apports: data.apports, achats: data.achats, ventes: data.ventes,
             remboursements: data.remboursements, offerts: data.offerts,
-            boissonsSnapshot: data.boissons
+            boissonsSnapshot: data.boissons // pour retrouver noms/prix de l'époque
         };
         await setDoc(doc(db, 'buvette', archiveId), archive);
+        // 2. Réinitialiser les données actives (le catalogue produits est conservé)
         data = { apports: [], boissons: data.boissons, achats: [], ventes: [], remboursements: [], offerts: [] };
         afficherToutesLesDonnees(); mettreAJourSelects(); fermerModal();
         await sauvegarderDonnees();
@@ -1064,12 +722,74 @@ async function reinitialiserDonnees() {
     }
 }
 
-// ============================================================
-// ARCHIVES
-// ============================================================
+// ===== INVENTAIRE DE FIN DE SAISON =====
+function ouvrirInventaireModal() {
+    if (!isAdmin) return;
+    const nomInput = document.getElementById('inventaireArchiveNom');
+    if (nomInput) nomInput.value = 'Saison jusqu\'au ' + new Date().toLocaleDateString('fr-FR');
+    const stock = calculerStock();
+    const container = document.getElementById('listeInventaire');
+    container.innerHTML = '';
+    const idsTries = Object.keys(stock).sort((a, b) => stock[a].nom.localeCompare(stock[b].nom));
+    if (!idsTries.length) {
+        container.innerHTML = '<p style="color:#999;">Aucun produit à inventorier.</p>';
+    }
+    idsTries.forEach(id => {
+        const item = stock[id];
+        const row = document.createElement('div');
+        row.className = 'inv-row';
+        row.innerHTML = `
+            <div>
+                <strong>${item.nom}</strong><br>
+                <small style="color:#888;">Stock théorique : ${item.stockRestant} ${item.unite}</small>
+            </div>
+            <input type="number" id="inv-${id}" value="${Math.max(item.stockRestant, 0)}" min="0" inputmode="numeric">`;
+        container.appendChild(row);
+    });
+    document.getElementById('inventaireModal').style.display = 'flex';
+}
+function fermerInventaireModal() {
+    document.getElementById('inventaireModal').style.display = 'none';
+}
+async function validerInventaireEtNouvelleSaison() {
+    if (!db || !isAdmin) return;
+    const nomInput = document.getElementById('inventaireArchiveNom');
+    const nom = (nomInput && nomInput.value.trim()) || ('Saison jusqu\'au ' + new Date().toLocaleDateString('fr-FR'));
+    const stock = calculerStock();
+    const comptage = {};
+    Object.keys(stock).forEach(id => {
+        const el = document.getElementById(`inv-${id}`);
+        comptage[id] = el ? Math.max(parseInt(el.value) || 0, 0) : Math.max(stock[id].stockRestant, 0);
+    });
+    if (!confirm('Confirmez-vous l\'inventaire ?\n\nLa saison actuelle sera archivée (comme un budget classique) puis une nouvelle saison démarrera avec les quantités comptées, sans qu\'elles soient comptées comme un nouvel achat.')) return;
+    try {
+        const archiveId = 'archive_' + Date.now();
+        const archive = {
+            type: 'archive',
+            nom,
+            dateArchivage: new Date().toISOString(),
+            viaInventaire: true,
+            apports: data.apports, achats: data.achats, ventes: data.ventes,
+            remboursements: data.remboursements, offerts: data.offerts,
+            boissonsSnapshot: data.boissons,
+            inventaireComptage: comptage
+        };
+        await setDoc(doc(db, 'buvette', archiveId), archive);
+        // Nouvelle saison : catalogue produits conservé, stock initial = quantités comptées à l'inventaire
+        const nouveauxProduits = data.boissons.map(b => ({ ...b, stockInitial: comptage[b.id] !== undefined ? comptage[b.id] : 0 }));
+        data = { apports: [], boissons: nouveauxProduits, achats: [], ventes: [], remboursements: [], offerts: [] };
+        afficherToutesLesDonnees(); mettreAJourSelects(); fermerInventaireModal();
+        await sauvegarderDonnees();
+        alert('🗓️ Saison "' + nom + '" archivée. La nouvelle saison démarre avec les stocks comptés !');
+    } catch(e) {
+        console.error(e);
+        alert('❌ Erreur lors de l\'archivage de l\'inventaire. Rien n\'a été réinitialisé.\n\nDétail technique : ' + (e.code || '') + ' ' + (e.message || e));
+    }
+}
+
+// ===== ARCHIVES =====
 let archiveOuverteId = null;
 let archivesCache = [];
-
 function getCoutAchatMoyenDepuis(achats, boissonId) {
     const filtres = achats.filter(a => a.boissonId === boissonId);
     if (!filtres.length) return 0;
@@ -1077,7 +797,6 @@ function getCoutAchatMoyenDepuis(achats, boissonId) {
     const cout = filtres.reduce((s,a) => s + a.total, 0);
     return qte > 0 ? cout / qte : 0;
 }
-
 function calculerBilanDepuis(d) {
     const totalApports = d.apports.reduce((s,a) => s+a.montant, 0);
     const totalDepenses = d.achats.reduce((s,a) => s+a.total, 0);
@@ -1093,7 +812,6 @@ function calculerBilanDepuis(d) {
     d.remboursements.forEach(r => { if(!contributeurs[r.contributeurNom]) contributeurs[r.contributeurNom]={totalApporte:0,totalRembourse:0}; contributeurs[r.contributeurNom].totalRembourse+=r.montant; });
     return { totalApports, totalDepenses, totalRecettes, totalRemboursements, totalOffertsValeurVente, coutTotalVentes, coutTotalOfferts, beneficeNet, soldeDisponible, contributeurs };
 }
-
 async function chargerArchives() {
     const container = document.getElementById('listeArchives');
     if (!db) return;
@@ -1112,7 +830,6 @@ async function chargerArchives() {
         container.innerHTML = '<p style="color:#e74c3c;">❌ Erreur de chargement des archives.</p>';
     }
 }
-
 function afficherListeArchives() {
     const container = document.getElementById('listeArchives');
     container.innerHTML = '';
@@ -1141,7 +858,6 @@ function afficherListeArchives() {
         container.appendChild(card);
     });
 }
-
 function voirArchive(id) {
     const a = archivesCache.find(x => x.id === id);
     if (!a) return;
@@ -1165,14 +881,11 @@ function voirArchive(id) {
     });
     document.getElementById('archiveDetailModal').style.display = 'flex';
 }
-
 function fermerArchiveDetailModal() {
     document.getElementById('archiveDetailModal').style.display = 'none';
     archiveOuverteId = null;
 }
-
 function exporterArchiveOuverte() { if (archiveOuverteId) exporterArchive(archiveOuverteId); }
-
 function exporterArchive(id) {
     const a = archivesCache.find(x => x.id === id);
     if (!a) return;
@@ -1185,7 +898,6 @@ function exporterArchive(id) {
         URL.revokeObjectURL(url);
     } catch(e) { alert('❌ Erreur exportation'); }
 }
-
 async function supprimerArchive(id) {
     if (!isAdmin) return;
     if (!confirm('Supprimer définitivement cette archive ? Cette action est irréversible.')) return;
@@ -1195,7 +907,6 @@ async function supprimerArchive(id) {
         afficherListeArchives();
     } catch(e) { alert('❌ Erreur lors de la suppression'); }
 }
-
 function getCoutAchatMoyen(boissonId) {
     const achats = data.achats.filter(a => a.boissonId === boissonId);
     if (!achats.length) return 0;
@@ -1204,9 +915,8 @@ function getCoutAchatMoyen(boissonId) {
     return qte > 0 ? cout / qte : 0;
 }
 
-// ============================================================
-// UTILITAIRES D'ÉDITION
-// ============================================================
+// ===== UTILITAIRE : créer inputs d'édition mobiles =====
+// Chaque ligne éditable expose un bouton ✓ Valider explicite pour mobile
 function makeActionCell(type, id) {
     return `<div class="action-icons">
         <button class="icon-btn edit-btn" onclick="activerEdition${type}(${id})"><i class="fas fa-edit"></i></button>
@@ -1215,7 +925,6 @@ function makeActionCell(type, id) {
         <button class="icon-btn cancel-btn" id="cancel-${type}-${id}" onclick="annulerEdition${type}(${id})" style="display:none;"><i class="fas fa-times"></i></button>
     </div>`;
 }
-
 function showEditMode(type, id, spanIds, inputIds) {
     spanIds.forEach(s => document.getElementById(s) && (document.getElementById(s).style.display = 'none'));
     inputIds.forEach(i => document.getElementById(i) && (document.getElementById(i).style.display = 'block'));
@@ -1225,7 +934,6 @@ function showEditMode(type, id, spanIds, inputIds) {
     if (cBtn) cBtn.style.display = 'inline-block';
     if (inputIds[0]) { const el = document.getElementById(inputIds[0]); if(el) el.focus(); }
 }
-
 function hideEditMode(type, id, spanIds, inputIds) {
     spanIds.forEach(s => document.getElementById(s) && (document.getElementById(s).style.display = 'block'));
     inputIds.forEach(i => document.getElementById(i) && (document.getElementById(i).style.display = 'none'));
@@ -1235,9 +943,7 @@ function hideEditMode(type, id, spanIds, inputIds) {
     if (cBtn) cBtn.style.display = 'none';
 }
 
-// ============================================================
-// PRODUITS
-// ============================================================
+// ===== PRODUITS =====
 function ajouterBoisson() {
     const nom = document.getElementById('boissonNom').value.trim();
     const type = document.getElementById('boissonType').value;
@@ -1254,7 +960,6 @@ function ajouterBoisson() {
     if (codeBarreInput) codeBarreInput.value = '';
     afficherBoissons(); mettreAJourSelects(); debounceSauvegarde();
 }
-
 function afficherBoissons() {
     const tbody = document.getElementById('tbodyBoissons'); tbody.innerHTML = '';
     data.boissons.forEach(b => {
@@ -1293,19 +998,16 @@ function afficherBoissons() {
         tbody.appendChild(tr);
     });
 }
-
 function activerEditionBoisson(id) {
     showEditMode('Boisson', id,
         [`boisson-nom-${id}`,`boisson-type-${id}`,`boisson-prix-${id}`,`boisson-unite-${id}`,`boisson-codebarre-${id}`],
         [`edit-boisson-nom-${id}`,`edit-boisson-type-${id}`,`edit-boisson-prix-${id}`,`edit-boisson-unite-${id}`,`edit-boisson-codebarre-${id}`]);
 }
-
 function annulerEditionBoisson(id) {
     hideEditMode('Boisson', id,
         [`boisson-nom-${id}`,`boisson-type-${id}`,`boisson-prix-${id}`,`boisson-unite-${id}`,`boisson-codebarre-${id}`],
         [`edit-boisson-nom-${id}`,`edit-boisson-type-${id}`,`edit-boisson-prix-${id}`,`edit-boisson-unite-${id}`,`edit-boisson-codebarre-${id}`]);
 }
-
 function sauvegarderModificationBoisson(id) {
     const nom = document.getElementById(`edit-boisson-nom-${id}`).value.trim();
     const type = document.getElementById(`edit-boisson-type-${id}`).value;
@@ -1320,7 +1022,6 @@ function sauvegarderModificationBoisson(id) {
     if (b) { b.nom = nom; b.type = type; b.prix = prix; b.unite = unite; b.codeBarre = codeBarre; }
     afficherBoissons(); mettreAJourSelects(); debounceSauvegarde();
 }
-
 function supprimerBoisson(id) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
     data.boissons = data.boissons.filter(b => b.id !== id);
@@ -1331,9 +1032,7 @@ function supprimerBoisson(id) {
     mettreAJourSelects(); debounceSauvegarde(); alert('🗑️ Produit supprimé !');
 }
 
-// ============================================================
-// STOCK
-// ============================================================
+// ===== STOCK =====
 function calculerStock() {
     const stock = {};
     data.boissons.forEach(b => { stock[b.id] = { nom:b.nom, type:b.type, unite:b.unite, prix:b.prix, stockInitial:(b.stockInitial||0), achatTotal:0, venteTotal:0, offertTotal:0, stockRestant:0 }; });
@@ -1343,10 +1042,10 @@ function calculerStock() {
     Object.keys(stock).forEach(id => { stock[id].stockRestant = stock[id].stockInitial + stock[id].achatTotal - stock[id].venteTotal - stock[id].offertTotal; });
     return stock;
 }
-
 function afficherStock() {
     const stock = calculerStock(); const container = document.getElementById('listeStock'); container.innerHTML = '';
     let tot=0, enStock=0, rupture=0;
+    // Trier par stock restant décroissant : les produits épuisés (<=0) se retrouvent naturellement en bas
     const idsTries = Object.keys(stock).sort((idA, idB) => stock[idB].stockRestant - stock[idA].stockRestant);
     idsTries.forEach(id => {
         const item = stock[id]; tot++;
@@ -1369,85 +1068,124 @@ function afficherStock() {
     document.getElementById('totalRupture').textContent = rupture;
 }
 
-// ============================================================
-// INVENTAIRE
-// ============================================================
-function ouvrirInventaireModal() {
-    if (!isAdmin) return;
-    const stock = calculerStock();
-    const cont = document.getElementById('listeInventaire');
-    if (!cont) return;
-    cont.innerHTML = '';
-    const idsTries = Object.keys(stock).sort((a,b) => stock[a].nom.localeCompare(stock[b].nom, 'fr'));
-    if (!idsTries.length) {
-        cont.innerHTML = '<p style="color:#999;">Aucun produit dans le catalogue.</p>';
+// ===== SCANNER CODE-BARRE =====
+function ouvrirScanner(context) {
+    scannerContext = context;
+    scannerDernierCode = null;
+    const zone = document.getElementById('scannerAssignZone');
+    if (zone) { zone.style.display = 'none'; zone.dataset.code = ''; }
+    const statusEl = document.getElementById('scannerStatus');
+    if (statusEl) statusEl.textContent = 'Initialisation de la caméra...';
+    document.getElementById('scannerModal').style.display = 'flex';
+
+    if (typeof Html5Qrcode === 'undefined') {
+        if (statusEl) statusEl.textContent = '❌ Scanner indisponible (chargement de la librairie a échoué)';
+        return;
     }
-    idsTries.forEach(id => {
-        const item = stock[id];
-        const row = document.createElement('div');
-        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee;';
-        row.innerHTML = `
-            <div>
-                <strong>${item.nom}</strong><br>
-                <small style="color:#888;">Stock théorique : ${item.stockRestant} ${item.unite}</small>
-            </div>
-            <input type="number" id="inv-compte-${id}" value="${Math.max(0, item.stockRestant)}" min="0" inputmode="numeric" style="width:80px;padding:8px;border:2px solid #ddd;border-radius:6px;font-size:16px;">
-        `;
-        cont.appendChild(row);
-    });
-    const nomInput = document.getElementById('inventaireArchiveNom');
-    if (nomInput) nomInput.value = 'Saison jusqu\'au ' + new Date().toLocaleDateString('fr-FR');
-    const modal = document.getElementById('inventaireModal');
-    if (modal) modal.style.display = 'flex';
-}
-
-function fermerInventaireModal() {
-    const modal = document.getElementById('inventaireModal');
-    if (modal) modal.style.display = 'none';
-}
-
-async function validerInventaireEtNouvelleSaison() {
-    if (!db || !isAdmin) return;
-    const nomInput = document.getElementById('inventaireArchiveNom');
-    const nom = (nomInput && nomInput.value.trim()) || ('Saison jusqu\'au ' + new Date().toLocaleDateString('fr-FR'));
-    if (!confirm('Confirmer l\'inventaire et démarrer une nouvelle saison ?\n\nLa saison actuelle sera archivée et le stock physique compté sera reporté sur la nouvelle saison.')) return;
     try {
-        const comptages = {};
-        data.boissons.forEach(b => {
-            const inp = document.getElementById(`inv-compte-${b.id}`);
-            comptages[b.id] = inp ? Math.max(0, parseInt(inp.value) || 0) : 0;
+        html5QrCode = new Html5Qrcode('scannerReader', {
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ],
+            verbose: false
         });
-        const archiveId = 'archive_' + Date.now();
-        const archive = {
-            type: 'archive',
-            nom,
-            dateArchivage: new Date().toISOString(),
-            apports: data.apports, achats: data.achats, ventes: data.ventes,
-            remboursements: data.remboursements, offerts: data.offerts,
-            boissonsSnapshot: data.boissons
-        };
-        await setDoc(doc(db, 'buvette', archiveId), archive);
-        const nouvellesBoissons = data.boissons.map(b => ({ ...b, stockInitial: comptages[b.id] || 0 }));
-        data = { apports: [], boissons: nouvellesBoissons, achats: [], ventes: [], remboursements: [], offerts: [] };
-        afficherToutesLesDonnees(); mettreAJourSelects(); fermerInventaireModal();
-        await sauvegarderDonnees();
-        alert('🗓️ Saison "' + nom + '" archivée. Nouvelle saison démarrée avec le stock physique compté !');
     } catch(e) {
-        console.error(e);
-        alert('❌ Erreur lors de l\'archivage de l\'inventaire. Rien n\'a été réinitialisé.\n\nDétail technique : ' + (e.code || '') + ' ' + (e.message || e));
+        if (statusEl) statusEl.textContent = '❌ Erreur d\'initialisation du scanner';
+        return;
+    }
+    Html5Qrcode.getCameras().then(cams => {
+        if (!cams || !cams.length) { if (statusEl) statusEl.textContent = '❌ Aucune caméra détectée'; return; }
+        const cam = cams.find(c => /back|rear|environment/i.test(c.label || '')) || cams[cams.length - 1];
+        html5QrCode.start(
+            cam.id,
+            { fps: 10, qrbox: { width: 260, height: 140 } },
+            (decodedText) => onCodeScanne(decodedText),
+            () => {} // échecs de lecture image par image : ignorés en silence
+        ).then(() => {
+            if (statusEl) statusEl.textContent = '📷 Visez le code-barre du produit';
+        }).catch(e => {
+            if (statusEl) statusEl.textContent = '❌ Erreur d\'accès à la caméra : ' + (e.message || e);
+        });
+    }).catch(() => {
+        if (statusEl) statusEl.textContent = '❌ Accès à la caméra refusé ou indisponible sur cet appareil';
+    });
+}
+function fermerScanner() {
+    if (html5QrCode) {
+        try {
+            html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+        } catch(e) {}
+    }
+    html5QrCode = null;
+    document.getElementById('scannerModal').style.display = 'none';
+    scannerContext = null;
+}
+function onCodeScanne(code) {
+    if (scannerDernierCode === code) return; // évite les lectures en rafale du même code
+    scannerDernierCode = code;
+    const statusEl = document.getElementById('scannerStatus');
+
+    if (scannerContext === 'boisson') {
+        const champ = document.getElementById('boissonCodeBarre');
+        if (champ) champ.value = code;
+        if (statusEl) statusEl.textContent = '✅ Code capturé : ' + code;
+        setTimeout(fermerScanner, 700);
+        return;
+    }
+    if (scannerContext === 'achat') {
+        const produit = data.boissons.find(b => b.codeBarre && b.codeBarre === code);
+        if (produit) {
+            document.getElementById('achatBoisson').value = produit.id;
+            if (statusEl) statusEl.textContent = '✅ ' + produit.nom + ' sélectionné';
+            setTimeout(() => {
+                fermerScanner();
+                const qte = document.getElementById('achatQuantite');
+                if (qte) qte.focus();
+            }, 600);
+        } else {
+            if (statusEl) statusEl.textContent = '';
+            const zone = document.getElementById('scannerAssignZone');
+            document.getElementById('scannerCodeInconnu').textContent = code;
+            const sel = document.getElementById('scannerAssignSelect'); sel.innerHTML = '';
+            data.boissons.forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.nom; sel.appendChild(o); });
+            if (zone) { zone.style.display = 'block'; zone.dataset.code = code; }
+        }
     }
 }
+function associerCodeBarreScanne() {
+    const zone = document.getElementById('scannerAssignZone');
+    const code = zone ? zone.dataset.code : null;
+    const boissonId = parseInt(document.getElementById('scannerAssignSelect').value);
+    const b = data.boissons.find(x => x.id === boissonId);
+    if (!b || !code) return;
+    if (data.boissons.some(x => x.codeBarre === code && x.id !== boissonId)) {
+        alert('❌ Ce code-barre est déjà associé à un autre produit'); return;
+    }
+    b.codeBarre = code;
+    afficherBoissons(); mettreAJourSelects(); debounceSauvegarde();
+    document.getElementById('achatBoisson').value = boissonId;
+    if (zone) zone.style.display = 'none';
+    const statusEl = document.getElementById('scannerStatus');
+    if (statusEl) statusEl.textContent = '✅ Code associé à ' + b.nom;
+    setTimeout(fermerScanner, 800);
+}
 
-// ============================================================
-// NAVIGATION
-// ============================================================
+// ===== NAVIGATION =====
 function changerSection(sectionId) {
+    // Bloquer l'accès à utilisateurs pour les visiteurs
     if(sectionId === 'utilisateurs' && !isAdmin) return;
+    // Cacher toutes les sections
     document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+    // Afficher uniquement la section demandée
     const cible = document.getElementById(sectionId);
     if(cible) cible.style.display = 'block';
+    // Sync le select nav
     const sel = document.getElementById('navSelect');
     if(sel && sel.value !== sectionId) sel.value = sectionId;
+    // Rafraîchir le contenu
     const map = {
         stock: afficherStock, bilan: calculerBilan, ventes: afficherVentes,
         achats: afficherAchats, boissons: afficherBoissons, apports: afficherApports,
@@ -1457,15 +1195,12 @@ function changerSection(sectionId) {
     };
     if(map[sectionId]) map[sectionId]();
 }
-
 function updateUsersTab() {
     const opt = document.getElementById('usersNavOption');
     if(opt) opt.style.display = isAdmin ? '' : 'none';
 }
 
-// ============================================================
-// VENTES
-// ============================================================
+// ===== VENTES =====
 function ajouterVente() {
     const boissonId = parseInt(document.getElementById('venteBoisson').value);
     const quantite = parseInt(document.getElementById('venteQuantite').value);
@@ -1477,7 +1212,6 @@ function ajouterVente() {
     trierDonneesParDate(); document.getElementById('venteQuantite').value = '';
     afficherVentes(); debounceSauvegarde();
 }
-
 function afficherVentes() {
     const tbody = document.getElementById('tbodyVentes'); tbody.innerHTML = '';
     [...data.ventes].sort((a,b) => triVentes==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
@@ -1500,15 +1234,12 @@ function afficherVentes() {
     });
     mettreAJourIndicateursTri();
 }
-
 function activerEditionVente(id) {
     showEditMode('Vente', id, [`vente-date-${id}`,`vente-quantite-${id}`], [`edit-vente-date-${id}`,`edit-vente-quantite-${id}`]);
 }
-
 function annulerEditionVente(id) {
     hideEditMode('Vente', id, [`vente-date-${id}`,`vente-quantite-${id}`], [`edit-vente-date-${id}`,`edit-vente-quantite-${id}`]);
 }
-
 function sauvegarderModificationVente(id) {
     const date = document.getElementById(`edit-vente-date-${id}`).value;
     const quantite = parseInt(document.getElementById(`edit-vente-quantite-${id}`).value);
@@ -1517,17 +1248,13 @@ function sauvegarderModificationVente(id) {
     if (v) { v.date = date; v.quantite = quantite; v.total = quantite * v.prixUnitaire; }
     trierDonneesParDate(); afficherVentes(); debounceSauvegarde();
 }
-
 function trierVentes() { triVentes = triVentes==='desc'?'asc':'desc'; afficherVentes(); }
-
 function supprimerVente(id) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette vente ?')) return;
     data.ventes = data.ventes.filter(v => v.id !== id); afficherVentes(); debounceSauvegarde(); alert('🗑️ Vente supprimée !');
 }
 
-// ============================================================
-// ACHATS
-// ============================================================
+// ===== ACHATS =====
 function ajouterAchat() {
     const boissonId = parseInt(document.getElementById('achatBoisson').value);
     const quantite = parseInt(document.getElementById('achatQuantite').value);
@@ -1540,7 +1267,6 @@ function ajouterAchat() {
     document.getElementById('achatQuantite').value = ''; document.getElementById('achatPrix').value = '';
     afficherAchats(); debounceSauvegarde();
 }
-
 function afficherAchats() {
     const tbody = document.getElementById('tbodyAchats'); tbody.innerHTML = '';
     [...data.achats].sort((a,b) => triAchats==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
@@ -1566,19 +1292,16 @@ function afficherAchats() {
     });
     mettreAJourIndicateursTri();
 }
-
 function activerEditionAchat(id) {
     showEditMode('Achat', id,
         [`achat-date-${id}`,`achat-quantite-${id}`,`achat-prix-${id}`],
         [`edit-achat-date-${id}`,`edit-achat-quantite-${id}`,`edit-achat-prix-${id}`]);
 }
-
 function annulerEditionAchat(id) {
     hideEditMode('Achat', id,
         [`achat-date-${id}`,`achat-quantite-${id}`,`achat-prix-${id}`],
         [`edit-achat-date-${id}`,`edit-achat-quantite-${id}`,`edit-achat-prix-${id}`]);
 }
-
 function sauvegarderModificationAchat(id) {
     const date = document.getElementById(`edit-achat-date-${id}`).value;
     const quantite = parseInt(document.getElementById(`edit-achat-quantite-${id}`).value);
@@ -1588,17 +1311,13 @@ function sauvegarderModificationAchat(id) {
     if (a) { a.date = date; a.quantite = quantite; a.prixUnitaire = prix; a.total = quantite*prix; }
     trierDonneesParDate(); afficherAchats(); debounceSauvegarde();
 }
-
 function trierAchats() { triAchats = triAchats==='desc'?'asc':'desc'; afficherAchats(); }
-
 function supprimerAchat(id) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet achat ?')) return;
     data.achats = data.achats.filter(a => a.id !== id); afficherAchats(); debounceSauvegarde(); alert('🗑️ Achat supprimé !');
 }
 
-// ============================================================
-// APPORTS
-// ============================================================
+// ===== APPORTS =====
 function ajouterApport() {
     const nom = document.getElementById('apportNom').value.trim();
     const montant = parseFloat(document.getElementById('apportMontant').value);
@@ -1609,7 +1328,6 @@ function ajouterApport() {
     document.getElementById('apportNom').value = ''; document.getElementById('apportMontant').value = '';
     afficherApports(); mettreAJourSelects(); debounceSauvegarde();
 }
-
 function afficherApports() {
     const tbody = document.getElementById('tbodyApports'); tbody.innerHTML = '';
     [...data.apports].sort((a,b) => triApports==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
@@ -1633,19 +1351,16 @@ function afficherApports() {
     });
     mettreAJourIndicateursTri();
 }
-
 function activerEditionApport(id) {
     showEditMode('Apport', id,
         [`apport-date-${id}`,`apport-nom-${id}`,`apport-montant-${id}`],
         [`edit-apport-date-${id}`,`edit-apport-nom-${id}`,`edit-apport-montant-${id}`]);
 }
-
 function annulerEditionApport(id) {
     hideEditMode('Apport', id,
         [`apport-date-${id}`,`apport-nom-${id}`,`apport-montant-${id}`],
         [`edit-apport-date-${id}`,`edit-apport-nom-${id}`,`edit-apport-montant-${id}`]);
 }
-
 function sauvegarderModificationApport(id) {
     const date = document.getElementById(`edit-apport-date-${id}`).value;
     const nom = document.getElementById(`edit-apport-nom-${id}`).value.trim();
@@ -1655,17 +1370,13 @@ function sauvegarderModificationApport(id) {
     if (a) { a.date = date; a.nom = nom; a.montant = montant; }
     trierDonneesParDate(); afficherApports(); mettreAJourSelects(); debounceSauvegarde();
 }
-
 function trierApports() { triApports = triApports==='desc'?'asc':'desc'; afficherApports(); }
-
 function supprimerApport(id) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet apport ?')) return;
     data.apports = data.apports.filter(a => a.id !== id); afficherApports(); mettreAJourSelects(); debounceSauvegarde(); alert('🗑️ Apport supprimé !');
 }
 
-// ============================================================
-// REMBOURSEMENTS
-// ============================================================
+// ===== REMBOURSEMENTS =====
 function ajouterRemboursement() {
     const nom = document.getElementById('remboursementContributeur').value;
     const montant = parseFloat(document.getElementById('remboursementMontant').value);
@@ -1674,7 +1385,6 @@ function ajouterRemboursement() {
     trierDonneesParDate(); document.getElementById('remboursementMontant').value = '';
     afficherRemboursements(); debounceSauvegarde();
 }
-
 function afficherRemboursements() {
     const tbody = document.getElementById('tbodyRemboursements'); tbody.innerHTML = '';
     [...data.remboursements].sort((a,b) => triRemboursements==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
@@ -1698,19 +1408,16 @@ function afficherRemboursements() {
     });
     mettreAJourIndicateursTri();
 }
-
 function activerEditionRemboursement(id) {
     showEditMode('Remboursement', id,
         [`remboursement-date-${id}`,`remboursement-nom-${id}`,`remboursement-montant-${id}`],
         [`edit-remboursement-date-${id}`,`edit-remboursement-nom-${id}`,`edit-remboursement-montant-${id}`]);
 }
-
 function annulerEditionRemboursement(id) {
     hideEditMode('Remboursement', id,
         [`remboursement-date-${id}`,`remboursement-nom-${id}`,`remboursement-montant-${id}`],
         [`edit-remboursement-date-${id}`,`edit-remboursement-nom-${id}`,`edit-remboursement-montant-${id}`]);
 }
-
 function sauvegarderModificationRemboursement(id) {
     const date = document.getElementById(`edit-remboursement-date-${id}`).value;
     const nom = document.getElementById(`edit-remboursement-nom-${id}`).value.trim();
@@ -1720,17 +1427,13 @@ function sauvegarderModificationRemboursement(id) {
     if (r) { r.date = date; r.contributeurNom = nom; r.montant = montant; }
     trierDonneesParDate(); afficherRemboursements(); mettreAJourSelects(); debounceSauvegarde();
 }
-
 function trierRemboursements() { triRemboursements = triRemboursements==='desc'?'asc':'desc'; afficherRemboursements(); }
-
 function supprimerRemboursement(id) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce remboursement ?')) return;
     data.remboursements = data.remboursements.filter(r => r.id !== id); afficherRemboursements(); mettreAJourSelects(); debounceSauvegarde(); alert('🗑️ Remboursement supprimé !');
 }
 
-// ============================================================
-// OFFERTS
-// ============================================================
+// ===== OFFERTS =====
 function ajouterOffert() {
     const boissonId = parseInt(document.getElementById('offertBoisson').value);
     const quantite = parseInt(document.getElementById('offertQuantite').value);
@@ -1744,7 +1447,6 @@ function ajouterOffert() {
     document.getElementById('offertQuantite').value = ''; document.getElementById('offertMotif').value = '';
     afficherOfferts(); debounceSauvegarde();
 }
-
 function afficherOfferts() {
     const tbody = document.getElementById('tbodyOfferts'); if (!tbody) return; tbody.innerHTML = '';
     [...data.offerts].sort((a,b) => triOfferts==='desc' ? new Date(b.date)-new Date(a.date) : new Date(a.date)-new Date(b.date))
@@ -1772,19 +1474,16 @@ function afficherOfferts() {
     });
     mettreAJourIndicateursTri();
 }
-
 function activerEditionOffert(id) {
     showEditMode('Offert', id,
         [`offert-date-${id}`,`offert-quantite-${id}`,`offert-motif-${id}`],
         [`edit-offert-date-${id}`,`edit-offert-quantite-${id}`,`edit-offert-motif-${id}`]);
 }
-
 function annulerEditionOffert(id) {
     hideEditMode('Offert', id,
         [`offert-date-${id}`,`offert-quantite-${id}`,`offert-motif-${id}`],
         [`edit-offert-date-${id}`,`edit-offert-quantite-${id}`,`edit-offert-motif-${id}`]);
 }
-
 function sauvegarderModificationOffert(id) {
     const date = document.getElementById(`edit-offert-date-${id}`).value;
     const quantite = parseInt(document.getElementById(`edit-offert-quantite-${id}`).value);
@@ -1794,17 +1493,13 @@ function sauvegarderModificationOffert(id) {
     if (o) { o.date = date; o.quantite = quantite; o.motif = motif; o.valeurVente = quantite * (data.boissons.find(b=>b.id===o.boissonId)?.prix || 0); }
     trierDonneesParDate(); afficherOfferts(); debounceSauvegarde();
 }
-
 function trierOfferts() { triOfferts = triOfferts==='desc'?'asc':'desc'; afficherOfferts(); }
-
 function supprimerOffert(id) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette consommation offerte ?')) return;
     data.offerts = data.offerts.filter(o => o.id !== id); afficherOfferts(); debounceSauvegarde(); alert('🗑️ Consommation offerte supprimée !');
 }
 
-// ============================================================
-// BILAN
-// ============================================================
+// ===== BILAN =====
 function calculerBilan() {
     const totalApports = data.apports.reduce((s,a) => s+a.montant, 0);
     const totalDepenses = data.achats.reduce((s,a) => s+a.total, 0);
@@ -1844,7 +1539,6 @@ function afficherDetailsContributeurs() {
         tbody.appendChild(tr);
     });
 }
-
 function mettreAJourSelects() {
     ['achatBoisson','venteBoisson','offertBoisson'].forEach(id => {
         const sel = document.getElementById(id); sel.innerHTML = '';
@@ -1853,15 +1547,13 @@ function mettreAJourSelects() {
     const selR = document.getElementById('remboursementContributeur'); selR.innerHTML = '';
     [...new Set(data.apports.map(a => a.nom))].forEach(nom => { selR.innerHTML += `<option value="${nom}">${nom}</option>`; });
 }
-
 function afficherToutesLesDonnees() {
     afficherApports(); afficherBoissons(); afficherAchats(); afficherVentes();
     afficherRemboursements(); afficherOfferts(); afficherStock(); calculerBilan(); mettreAJourIndicateursTri();
 }
 
-// ============================================================
-// AUTHENTIFICATION
-// ============================================================
+// ===== AUTH =====
+function toggleLoginPanel() {}
 function afficherLogin() {
     const ls = document.getElementById('loginScreen');
     const nb = document.getElementById('navBar');
@@ -1872,7 +1564,6 @@ function afficherLogin() {
     const msg = document.getElementById('loginMsg');
     if(msg) msg.textContent = '';
 }
-
 function masquerLogin() {
     const ls = document.getElementById('loginScreen');
     const nb = document.getElementById('navBar');
@@ -1881,23 +1572,52 @@ function masquerLogin() {
     if(nb) nb.style.display = 'flex';
     if(ct) ct.style.display = 'block';
 }
-
+function showLogin() { afficherLogin(); }
 function showAuthMsg(msg, color) {
     const el = document.getElementById('loginMsg');
     if(el){ el.textContent = msg; el.style.color = color === 'red' ? '#c0281a' : '#1e8c45'; }
 }
+// ── Journal de diagnostic (visible sans outils développeur, survit au rechargement de la redirection Google) ──
+function debugLog(msg) {
+    try {
+        const entry = new Date().toLocaleTimeString('fr-FR') + ' — ' + msg;
+        let log = JSON.parse(sessionStorage.getItem('buvetteDebugLog') || '[]');
+        log.push(entry);
+        if (log.length > 25) log.shift();
+        sessionStorage.setItem('buvetteDebugLog', JSON.stringify(log));
+    } catch(e) {}
+    renderDebugLog();
+}
+function renderDebugLog() {
+    const el = document.getElementById('debugLogBox');
+    if (!el) return;
+    try {
+        const log = JSON.parse(sessionStorage.getItem('buvetteDebugLog') || '[]');
+        el.innerHTML = log.map(l => `<div>${l}</div>`).join('') || '<div style="color:#ccc;">(journal vide)</div>';
+        el.scrollTop = el.scrollHeight;
+    } catch(e) {}
+}
+function effacerDebugLog() { sessionStorage.removeItem('buvetteDebugLog'); renderDebugLog(); }
+renderDebugLog();
+debugLog('Page chargée : ' + location.href);
 
 async function loginWithGoogle() {
     const m = document.getElementById('loginMsg');
     if(m){ m.style.color='#888'; m.textContent='Connexion à Google...'; }
+    debugLog('Clic Connexion Google → signInWithPopup...');
     try {
         const result = await signInWithPopup(auth, provider);
+        debugLog('signInWithPopup OK: ' + (result && result.user ? result.user.email : '?'));
         masquerLogin();
     } catch(e) {
+        debugLog('signInWithPopup ERREUR: ' + (e.code||e.message));
+        // Fallback vers redirect si popup bloqué / non supporté (ex: navigateur mobile restrictif)
         if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment' || e.code === 'auth/cancelled-popup-request') {
+            debugLog('→ Fallback signInWithRedirect...');
             if(m){ m.style.color='#888'; m.textContent='Redirection vers Google...'; }
             try { await signInWithRedirect(auth, provider); }
             catch(e2) {
+                debugLog('signInWithRedirect ERREUR: ' + (e2.code||e2.message));
                 if(m) m.textContent = e2.code==='auth/unauthorized-domain' ? '⚠️ Domaine non autorisé' : '❌ '+e2.message;
             }
         } else if (e.code === 'auth/popup-closed-by-user') {
@@ -1907,10 +1627,9 @@ async function loginWithGoogle() {
         }
     }
 }
-
 async function loginWithEmail() {
-    const email = (document.getElementById('emailInput')?.value || '').trim();
-    const password = document.getElementById('passwordInput')?.value || '';
+    const email = (document.getElementById('emailInput')?.value || document.getElementById('loginEmail')?.value || '').trim();
+    const password = document.getElementById('passwordInput')?.value || document.getElementById('loginPassword')?.value || '';
     const msg = document.getElementById('loginMsg');
     if (!email || !password) { if(msg){ msg.style.color='#c0281a'; msg.textContent='Email et mot de passe requis'; } return; }
     try {
@@ -1921,12 +1640,12 @@ async function loginWithEmail() {
         if(msg){ msg.style.color='#c0281a'; msg.textContent=(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')?'Mot de passe incorrect':e.code==='auth/user-not-found'?'Email inconnu':'Erreur: '+e.code; }
     }
 }
-
 function getSecondaryApp() {
     if (!secondaryApp) { try { secondaryApp = initializeApp(firebaseConfig, 'secondary'); } catch(e) {} }
     return secondaryApp;
 }
-
+// Normalise une adresse email pour comparaison fiable : minuscules, et pour Gmail,
+// ignore les points et tout ce qui suit un "+" dans la partie locale (comme le fait Gmail lui-même).
 function normaliserEmail(email) {
     let e = (email || '').trim().toLowerCase();
     const parts = e.split('@');
@@ -1938,7 +1657,6 @@ function normaliserEmail(email) {
     }
     return local + '@' + domain;
 }
-
 async function addUser() {
     const email = document.getElementById('newUserEmail')?.value?.trim();
     const password = document.getElementById('newUserPassword')?.value;
@@ -1960,7 +1678,6 @@ async function addUser() {
         if(msgEl) { msgEl.style.color='#e74c3c'; msgEl.textContent=m; }
     }
 }
-
 async function addGoogleUser() {
     const emailRaw = document.getElementById('newGoogleUserEmail')?.value?.trim();
     const name = document.getElementById('newGoogleUserName')?.value?.trim() || '';
@@ -1969,6 +1686,8 @@ async function addGoogleUser() {
     const email = normaliserEmail(emailRaw);
     if(msgEl) { msgEl.style.color='#888'; msgEl.textContent='⏳ Ajout...'; }
     try {
+        // Pas de compte Firebase Auth créé ici : on autorise juste cet email à se connecter
+        // via son propre compte Google. L'UID sera lié automatiquement à sa première connexion.
         const ref = doc(collection(db, 'authorizedUsers'));
         await setDoc(ref, { email, name, createdAt: new Date().toISOString(), createdBy: currentUser?.email||'admin', role: 'saisie', method: 'google' });
         if(msgEl) { msgEl.style.color='#27ae60'; msgEl.textContent=`✅ ${email} peut maintenant se connecter avec Google !`; }
@@ -1978,7 +1697,6 @@ async function addGoogleUser() {
         if(msgEl) { msgEl.style.color='#e74c3c'; msgEl.textContent='❌ '+e.message; }
     }
 }
-
 async function loadUsersList() {
     const listEl = document.getElementById('usersList'); if (!listEl) return;
     try {
@@ -1993,29 +1711,31 @@ async function loadUsersList() {
         html+='</tbody></table>'; listEl.innerHTML=html;
     } catch(e) { listEl.innerHTML='<p style="color:#e74c3c;text-align:center;">Erreur de chargement</p>'; }
 }
-
 async function removeUser(uid, email) {
     if (!confirm(`Retirer l'accès à ${email} ?`)) return;
     try { await deleteDoc(doc(db, 'authorizedUsers', uid)); alert(`✅ ${email} retiré`); loadUsersList(); }
     catch(e) { alert('❌ Erreur suppression'); }
 }
-
 async function updateUIForUser(user) {
     const adminLoginBtn = document.getElementById('adminLoginBtn');
     const logoutBtn     = document.getElementById('logoutBtn');
+    const visitorBtn    = document.getElementById('visitorLoginBtn');
     const userEmailSpan = document.getElementById('userEmail');
     const usersSection  = document.getElementById('utilisateurs');
 
     if (user) {
+        // ── Utilisateur Firebase connecté ──────────────────────────────
         currentUser = user; isVisitor = false;
         const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","checheux@gmail.com"];
         isAdmin = adminEmails.map(normaliserEmail).includes(normaliserEmail(user.email));
 
         if (isAdmin) {
+            debugLog('→ Reconnu comme ADMIN, affichage interface admin');
             isSaisie = false;
             if(userEmailSpan) userEmailSpan.innerHTML = '<span style="background:#27ae60;color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">👑 Admin</span>';
             if(logoutBtn)    logoutBtn.style.display    = 'inline-block';
             if(adminLoginBtn) adminLoginBtn.style.display = 'none';
+            if(visitorBtn)   visitorBtn.style.display   = 'none';
             if(usersSection) usersSection.style.display = 'block';
             updateUsersTab();
             document.body.classList.remove('readonly-mode','saisie-mode');
@@ -2029,6 +1749,7 @@ async function updateUIForUser(user) {
             startRealtimeSync();
             chargerCodeVisiteur();
         } else {
+            // Vérifier que l'utilisateur est dans authorizedUsers (par UID, ou par email pour les comptes Google autorisés à l'avance)
             try {
                 let autorise = false;
                 const snap = await getDoc(doc(db, 'authorizedUsers', user.uid));
@@ -2040,10 +1761,12 @@ async function updateUIForUser(user) {
                     if (!qSnap.empty) autorise = true;
                 }
                 if (autorise) {
+                    debugLog('→ Reconnu comme VENDEUR autorisé');
                     isSaisie = true;
                     if(userEmailSpan) userEmailSpan.innerHTML = '<span style="background:#3498db;color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">✏️ Vendeur</span>';
                     if(logoutBtn)    logoutBtn.style.display    = 'inline-block';
                     if(adminLoginBtn) adminLoginBtn.style.display = 'none';
+                    if(visitorBtn)   visitorBtn.style.display   = 'none';
                     if(usersSection) usersSection.style.display = 'none';
                     updateUsersTab();
                     document.body.classList.remove('readonly-mode');
@@ -2057,21 +1780,26 @@ async function updateUIForUser(user) {
                     startRealtimeSync();
                     changerSection('ventes');
                 } else {
+                    // Non autorisé : déconnexion immédiate
+                    debugLog('→ NON autorisé (ni admin, ni dans authorizedUsers) → déconnexion');
                     await signOut(auth);
-                    showAuthMsg('Accès refusé. Contactez l\'administrateur.', 'red');
+                    showAuthMsg('Acces refuse. Contactez l administrateur.', 'red');
                     afficherLogin();
                 }
             } catch(e) {
+                debugLog('→ ERREUR pendant vérification authorizedUsers: ' + (e.code || e.message));
                 await signOut(auth);
-                alert('Erreur de vérification. Réessayez.\n\nDétail : ' + (e.code || e.message));
+                alert('Erreur de verification. Reessayez.\n\nDétail : ' + (e.code || e.message));
             }
         }
 
     } else if (isVisitor) {
+        // ── Mode visiteur (code valide) ────────────────────────────────
         isAdmin = false; isSaisie = false;
         if(userEmailSpan) userEmailSpan.innerHTML = '<span style="background:#17a2b8;color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">Visiteur</span>';
         if(logoutBtn)    logoutBtn.style.display    = 'inline-block';
         if(adminLoginBtn) adminLoginBtn.style.display = 'none';
+        if(visitorBtn)   visitorBtn.style.display   = 'none';
         if(usersSection) usersSection.style.display = 'none';
         const usersOpt = document.getElementById('usersNavOption');
         if(usersOpt) usersOpt.style.display = 'none';
@@ -2087,6 +1815,8 @@ async function updateUIForUser(user) {
         startRealtimeSync();
 
     } else {
+        // ── Déconnecté → retour page accueil ───────────────────────────
+        debugLog('→ Branche "déconnecté" : affichage écran de connexion');
         currentUser = null; isAdmin = false; isSaisie = false; isVisitor = false;
         if(logoutBtn)    logoutBtn.style.display    = 'none';
         if(adminLoginBtn) adminLoginBtn.style.display = 'inline-block';
@@ -2094,13 +1824,11 @@ async function updateUIForUser(user) {
         if(usersSection) usersSection.style.display = 'none';
         document.body.classList.add('readonly-mode');
         document.body.classList.remove('saisie-mode');
-        const btnInvLogout = document.getElementById('btnOuvrirInventaire');
-        if(btnInvLogout) btnInvLogout.style.display = 'none';
         afficherLogin();
     }
 }
 
-// ── Code visiteur ──
+// ── Code visiteur ─────────────────────────────────────────────────────────
 async function chargerCodeVisiteur() {
     try {
         const snap = await getDoc(doc(db, 'barConfig', 'visiteurCode'));
@@ -2113,7 +1841,6 @@ async function chargerCodeVisiteur() {
         }
     } catch(e) { console.error('Erreur code visiteur:', e); }
 }
-
 async function regenererCode() {
     if(!isAdmin) return;
     const code = String(Math.floor(100000 + Math.random() * 900000));
@@ -2123,10 +1850,9 @@ async function regenererCode() {
         const el = document.getElementById('currentVisitorCode');
         if(el) el.textContent = code;
         const msg = document.getElementById('visitorCodeMsg');
-        if(msg){ msg.textContent = 'Nouveau code généré !'; setTimeout(()=>{ msg.textContent=''; }, 3000); }
-    } catch(e) { alert('Erreur génération code'); }
+        if(msg){ msg.textContent = 'Nouveau code genere !'; setTimeout(()=>{ msg.textContent=''; }, 3000); }
+    } catch(e) { alert('Erreur generation code'); }
 }
-
 function afficherFormVisiteur() {
     const f = document.getElementById('visitorForm');
     const b = document.getElementById('btnVisitorOpen');
@@ -2137,25 +1863,26 @@ function afficherFormVisiteur() {
     const msg = document.getElementById('visitorCodeMsg2');
     if(msg) msg.textContent='';
 }
-
 function cacherFormVisiteur() {
     const f = document.getElementById('visitorForm');
     const b = document.getElementById('btnVisitorOpen');
     if(f){ f.style.display='none'; }
     if(b){ b.style.display='flex'; }
 }
-
+// Legacy (modal visiteur externe - gardé pour compat)
+function ouvrirModalVisiteur() { afficherFormVisiteur(); }
+function fermerModalVisiteur() { cacherFormVisiteur(); }
 async function validerCodeVisiteur() {
     const saisi = document.getElementById('visitorCodeInput').value.trim();
     const msg   = document.getElementById('visitorCodeMsg2');
-    if(!saisi || saisi.length !== 6){ msg.textContent = 'Entrez un code à 6 chiffres'; return; }
-    msg.style.color = '#888'; msg.textContent = 'Vérification...';
+    if(!saisi || saisi.length !== 6){ msg.textContent = 'Entrez un code a 6 chiffres'; return; }
+    msg.style.color = '#888'; msg.textContent = 'Verification...';
     try {
         const snap = await getDoc(doc(db, 'barConfig', 'visiteurCode'));
         const bon  = snap.exists() ? snap.data().code : null;
         if(saisi === bon){
             isVisitor = true;
-            cacherFormVisiteur();
+            fermerModalVisiteur();
             updateUIForUser(null);
         } else {
             msg.style.color = '#e74c3c'; msg.textContent = 'Code incorrect.';
@@ -2163,31 +1890,36 @@ async function validerCodeVisiteur() {
     } catch(e) { msg.style.color='#e74c3c'; msg.textContent='Erreur de connexion'; }
 }
 
-// ============================================================
-// INIT
-// ============================================================
+// ===== INIT =====
 function initialiser() {
     const auj = getDateDuJour();
     ['apportDate','achatDate','venteDate','offertDate'].forEach(id => { const el=document.getElementById(id); if(el) el.value=auj; });
     window.addEventListener('beforeunload', () => { if (!isSaving) sauvegarderDonnees(); });
     setInterval(() => { if (!isSaving && (isAdmin || isSaisie)) debounceSauvegarde(); }, 30000);
+    // Afficher la page de connexion par défaut
     afficherLogin();
 }
 
+// Brancher Firebase Auth à la racine du module (pas dans initialiser)
 onAuthStateChanged(auth, async (user) => {
+    debugLog('onAuthStateChanged: ' + (user ? user.email + ' (uid ' + user.uid + ')' : 'aucun utilisateur (null)'));
     await updateUIForUser(user);
 });
 
+// Capture le résultat d'une éventuelle redirection Google (login via signInWithRedirect)
 getRedirectResult(auth).then((result) => {
-    // Résultat traité par onAuthStateChanged
+    debugLog('getRedirectResult OK: ' + (result && result.user ? result.user.email : 'pas de redirection en cours'));
 }).catch((e) => {
+    debugLog('getRedirectResult ERREUR: ' + (e.code || e.message));
     console.error('Erreur retour redirection Google:', e);
+    const m = document.getElementById('loginMsg');
+    if (m) m.textContent = '❌ Connexion Google échouée : ' + (e.code || e.message);
 });
 
 // Exposer tout en global
 Object.assign(window, {
-    loginWithGoogle, loginWithEmail, addUser, addGoogleUser, removeUser,
-    afficherFormVisiteur, cacherFormVisiteur, validerCodeVisiteur, regenererCode,
+    toggleLoginPanel, loginWithGoogle, loginWithEmail, addUser, addGoogleUser, removeUser, effacerDebugLog,
+    ouvrirModalVisiteur, fermerModalVisiteur, validerCodeVisiteur, regenererCode, afficherFormVisiteur, cacherFormVisiteur,
     doLogout: async () => { if(isVisitor){ isVisitor=false; await updateUIForUser(null); } else { await signOut(auth); } },
     sauvegarderDonnees, imprimerDonnees, exporterDonnees, importerDonnees,
     demanderReset, fermerModal, reinitialiserDonnees, changerSection,
@@ -2199,8 +1931,8 @@ Object.assign(window, {
     ajouterOffert, supprimerOffert, activerEditionOffert, annulerEditionOffert, sauvegarderModificationOffert,
     trierVentes, trierAchats, trierApports, trierRemboursements, trierOfferts,
     chargerArchives, voirArchive, fermerArchiveDetailModal, exporterArchive, exporterArchiveOuverte, supprimerArchive,
-    ouvrirInventaireModal, fermerInventaireModal, validerInventaireEtNouvelleSaison,
-    afficherLogin, masquerLogin, showAuthMsg
+    ouvrirScanner, fermerScanner, associerCodeBarreScanne,
+    ouvrirInventaireModal, fermerInventaireModal, validerInventaireEtNouvelleSaison
 });
 
 document.addEventListener('DOMContentLoaded', initialiser);
