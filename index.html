@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <!-- QuaggaJS - bibliothèque de scan de codes-barres fiable qui fonctionne partout -->
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7f3ee; min-height: 100vh; padding: 10px; }
@@ -112,7 +114,7 @@
         #loginPanel, #loginPanel * { pointer-events:auto !important; opacity:1 !important; }
         .modal, .modal * { pointer-events:auto !important; opacity:1 !important; }
 
-        /* ===== SCANNER (style MesCourses) ===== */
+        /* ===== SCANNER Quagga ===== */
         .field-with-scan { display:flex; gap:8px; align-items:stretch; }
         .field-with-scan select, .field-with-scan input { flex:1; min-width:0; }
         .btn-scan { background:#17a2b8; color:#fff; border:none; border-radius:8px; width:auto; flex-shrink:0; padding:0 16px; font-size:18px; cursor:pointer; min-height:48px; touch-action:manipulation; }
@@ -134,57 +136,14 @@
             height:100% !important;
             object-fit:cover;
         }
-        #scan-zone .scan-overlay {
+        #scan-zone .drawingBuffer {
             position:absolute;
-            inset:0;
-            pointer-events:none;
-            z-index:10;
-        }
-        #scan-zone .scan-overlay__mask {
-            position:absolute;
-            background:rgba(0,0,0,0.55);
-        }
-        #scan-zone .scan-overlay__region {
-            position:absolute;
-            width:var(--scan-w);
-            height:var(--scan-h);
-            left:var(--scan-x);
-            top:var(--scan-y);
-        }
-        #scan-zone .scan-overlay__bracket {
-            position:absolute;
-            width:24px;
-            height:24px;
-            border-color:#00ff88;
-            border-style:solid;
-            border-width:0;
-        }
-        #scan-zone .scan-overlay__bracket--tl { top:-1px; left:-1px; border-top-width:3px; border-left-width:3px; border-top-left-radius:4px; }
-        #scan-zone .scan-overlay__bracket--tr { top:-1px; right:-1px; border-top-width:3px; border-right-width:3px; border-top-right-radius:4px; }
-        #scan-zone .scan-overlay__bracket--bl { bottom:-1px; left:-1px; border-bottom-width:3px; border-left-width:3px; border-bottom-left-radius:4px; }
-        #scan-zone .scan-overlay__bracket--br { bottom:-1px; right:-1px; border-bottom-width:3px; border-right-width:3px; border-bottom-right-radius:4px; }
-        #scan-zone .scan-overlay__line {
-            position:absolute;
-            left:10%;
             top:0;
-            width:80%;
-            height:calc(100% - 2px);
-            animation:scan-sweep 2.5s ease-in-out infinite;
-        }
-        #scan-zone .scan-overlay__line::before {
-            content:'';
-            display:block;
+            left:0;
             width:100%;
-            height:2px;
-            background:#00ff88;
-            box-shadow:0 0 8px #00ff88;
-            border-radius:1px;
+            height:100%;
+            pointer-events:none;
         }
-        @keyframes scan-sweep {
-            0%, 100% { transform:translateY(0); }
-            50% { transform:translateY(100%); }
-        }
-
         #scan-status { font-size:13px; color:#888; min-height:18px; margin-top:10px; text-align:center; }
         #scan-result-card { display:none; margin-top:1rem; border-top:1px dashed #d4c9b5; padding-top:1rem; text-align:left; }
         #scan-result-card .scan-r-row { display:flex; gap:.8rem; margin-bottom:.7rem; align-items:center; }
@@ -598,7 +557,7 @@
     </div>
 </div>
 
-<!-- Modal Scanner (reprise exacte de MesCourses) -->
+<!-- Modal Scanner (Quagga) -->
 <div id="scan-modal" class="modal no-print">
     <div class="modal-content" style="max-width:440px;text-align:center;">
         <h3 style="text-align:center;">📷 Scanner un code-barre</h3>
@@ -607,7 +566,6 @@
 
         <div style="display:flex;gap:.5rem;margin-top:.8rem;flex-wrap:wrap;">
             <button class="btn btn-primary btn-full" id="scan-start-btn" style="padding:.7rem;flex:2;min-width:120px;">📷 Démarrer</button>
-            <button class="btn btn-outline btn-icon" id="scan-torch-btn" style="display:none;flex:none;min-width:48px;" title="Torche">💡</button>
             <button class="btn btn-outline btn-sm" id="scan-stop-btn" style="flex:none;min-width:60px;">Arrêter</button>
         </div>
 
@@ -1078,10 +1036,272 @@ function afficherStock() {
 }
 
 // ======================================================
-// SCANNER - REPRISE EXACTE DE MESCOURSES
+// SCANNER - Quagga (fonctionne sur tous les navigateurs)
 // ======================================================
-// Le script du scanner est chargé dans le bloc <script> ci-dessous
-// Il est défini après le module pour éviter les conflits
+let scanMode = null;
+let scanProcessing = false;
+let scanLastProduct = null;
+let quaggaRunning = false;
+
+function scanSetStatus(msg, isError){
+    const el = document.getElementById('scan-status');
+    if(el){ el.textContent = msg || ''; el.style.color = isError ? '#c0392b' : '#888'; }
+}
+
+function resetScanUI(){
+    const startBtn = document.getElementById('scan-start-btn');
+    if(startBtn) startBtn.textContent = '📷 Démarrer';
+    const zone = document.getElementById('scan-zone');
+    if(zone){ zone.style.display = 'none'; zone.innerHTML = ''; }
+    if (typeof Quagga !== 'undefined' && quaggaRunning) {
+        try { Quagga.stop(); } catch(e) {}
+        quaggaRunning = false;
+    }
+}
+
+function startScanCamera(){
+    if (quaggaRunning) { resetScanUI(); return; }
+    if (typeof Quagga === 'undefined') {
+        scanSetStatus('❌ Bibliothèque Quagga non chargée. Rechargez la page.', true);
+        return;
+    }
+
+    scanSetStatus('📷 Ouverture de la caméra…');
+    const zone = document.getElementById('scan-zone');
+    zone.style.display = 'block';
+    zone.innerHTML = '';
+    const rect = zone.getBoundingClientRect();
+    zone.style.height = Math.round(rect.width * 0.75) + 'px';
+    document.getElementById('scan-start-btn').textContent = '📷 Scannage…';
+
+    Quagga.init({
+        inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: zone,
+            constraints: {
+                facingMode: "environment",
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            }
+        },
+        decoder: {
+            readers: [
+                "ean_reader",
+                "ean_8_reader",
+                "code_128_reader",
+                "code_39_reader",
+                "code_93_reader",
+                "codabar_reader",
+                "upc_reader",
+                "upc_e_reader",
+                "i2of5_reader"
+            ],
+            multiple: false,
+            debug: {
+                showCanvas: true,
+                showPatches: false,
+                showFoundPatches: false,
+                showSkeleton: false,
+                showLabels: false,
+                showPatchLabels: false,
+                showRemainingPatchLabels: false,
+                boxFromPatches: {
+                    showTransformed: false,
+                    showTransformedBox: false,
+                    showBB: false
+                }
+            }
+        },
+        locator: {
+            patchSize: "large",
+            halfSample: true
+        }
+    }, function(err) {
+        if (err) {
+            scanSetStatus('❌ Erreur caméra: ' + err, true);
+            resetScanUI();
+            return;
+        }
+        quaggaRunning = true;
+        scanSetStatus('🔍 Visez le code-barres…');
+        Quagga.start();
+    });
+
+    Quagga.onDetected(function(result) {
+        if (!result || !result.codeResult) return;
+        const code = result.codeResult.code;
+        if (code && !scanProcessing) {
+            onScanDetected(code);
+        }
+    });
+
+    Quagga.onProcessed(function(result) {
+        // Dessiner le cadre de détection
+        var drawingCtx = Quagga.canvas.ctx.overlay;
+        var drawingCanvas = Quagga.canvas.dom.overlay;
+        if (result) {
+            if (result.boxes) {
+                drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                result.boxes.filter(function(box) {
+                    return box !== result.box;
+                }).forEach(function(box) {
+                    Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, { color: "green", lineWidth: 2 });
+                });
+            }
+            if (result.box) {
+                Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, { color: "#00F", lineWidth: 2 });
+            }
+            if (result.codeResult && result.codeResult.code) {
+                Quagga.ImageDebug.drawPath(result.line, { x: 0, y: 1 }, drawingCtx, { color: "red", lineWidth: 5 });
+            }
+        }
+    });
+}
+
+function stopScanCamera(){
+    resetScanUI();
+    scanSetStatus('🛑 Caméra arrêtée');
+}
+
+// Saisie manuelle
+document.getElementById('scan-manual-ean').addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+        const val = e.target.value.trim();
+        if (val) await onScanDetected(val);
+    }
+});
+
+async function onScanDetected(ean) {
+    if (scanProcessing) return;
+    scanProcessing = true;
+    if (navigator.vibrate) navigator.vibrate(80);
+    stopScanCamera();
+    scanSetStatus('🔍 Recherche du produit ' + ean + '…');
+
+    try {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`);
+        const data = await res.json();
+        if (data.status !== 1) {
+            scanSetStatus('⚠️ Produit non trouvé, saisie manuelle', true);
+            renderScanResult(ean, { product_name: 'Produit ' + ean });
+            scanProcessing = false;
+            return;
+        }
+        renderScanResult(ean, data.product);
+        scanSetStatus('');
+    } catch(err) {
+        scanSetStatus('❌ Erreur réseau, saisie manuelle', true);
+        renderScanResult(ean, { product_name: 'Produit ' + ean });
+    }
+    scanProcessing = false;
+}
+
+function guessCategorieFromProduct(p) {
+    const hay = ((p.categories || '') + ' ' + (p.product_name_fr || p.product_name || '')).toLowerCase();
+    if (/bière|vin|whisky|vodka|rhum|pastis|champagne|cidre|porto|muscat|tequila|gin|limonade|soda|cola|jus|eau|thé|sirop|energisant/.test(hay)) return 'boisson';
+    if (/nourriture|plat|sauce|pâte|riz|pomme de terre|frite|gâteau|biscuit|pain|viennoiserie|céréale|chocolat|bonbon|confiture|miel|nutella|beurre|huile|vinaigre|sel|poivre|épice/.test(hay)) return 'nourriture';
+    return 'autre';
+}
+
+function renderScanResult(ean, p) {
+    const nom = p.product_name_fr || p.product_name || ('Produit ' + ean);
+    const catGuess = guessCategorieFromProduct(p);
+    scanLastProduct = {
+        nom,
+        marque: p.brands || '',
+        imageUrl: p.image_front_small_url || p.image_url || '',
+        ean,
+        nutriscore: p.nutriscore_grade || '',
+        catGuess
+    };
+
+    document.getElementById('scan-r-img').src = scanLastProduct.imageUrl || '';
+    document.getElementById('scan-r-nom').textContent = nom;
+    document.getElementById('scan-r-marque').textContent = scanLastProduct.marque || '—';
+    document.getElementById('scan-r-cat').value = catGuess;
+
+    const existingProd = data.boissons.find(b => b.codeBarre === ean || b.nom.toLowerCase() === nom.toLowerCase());
+    if (existingProd) {
+        document.getElementById('scan-r-prix').value = existingProd.prix || '';
+        document.getElementById('scan-r-uniteprix').value = existingProd.unite || 'unite';
+    } else {
+        document.getElementById('scan-r-prix').value = '';
+        document.getElementById('scan-r-uniteprix').value = 'unite';
+    }
+
+    document.getElementById('scan-result-card').style.display = 'block';
+}
+
+// Confirmer l'ajout
+document.getElementById('scan-confirm-btn').onclick = function() {
+    if (!scanLastProduct) return;
+    const nom = scanLastProduct.nom;
+    const type = document.getElementById('scan-r-cat').value;
+    const prix = parseFloat(document.getElementById('scan-r-prix').value);
+    const unite = document.getElementById('scan-r-uniteprix').value;
+    const codeBarre = scanLastProduct.ean;
+
+    if (!nom || !prix || prix <= 0) {
+        alert('Veuillez remplir le nom et le prix');
+        return;
+    }
+
+    // Ajouter le produit
+    const newId = Date.now();
+    data.boissons.push({
+        id: newId,
+        nom: nom,
+        type: type || 'boisson',
+        prix: prix,
+        unite: unite || 'unite',
+        codeBarre: codeBarre,
+        stockInitial: 0,
+        dateAjout: new Date().toISOString()
+    });
+
+    afficherBoissons();
+    mettreAJourSelects();
+    debounceSauvegarde();
+
+    if (scanMode === 'achat') {
+        const sel = document.getElementById('achatBoisson');
+        if (sel) {
+            const nouveau = data.boissons.find(b => b.codeBarre === codeBarre);
+            if (nouveau) sel.value = nouveau.id;
+        }
+        alert('✅ Produit "' + nom + '" ajouté et sélectionné pour l\'achat');
+    } else if (scanMode === 'boisson') {
+        document.getElementById('boissonCodeBarre').value = codeBarre;
+        alert('✅ Code-barre associé au produit "' + nom + '"');
+    }
+
+    document.getElementById('scan-result-card').style.display = 'none';
+    document.getElementById('scan-modal').style.display = 'none';
+};
+
+// Boutons
+document.getElementById('scan-start-btn').onclick = startScanCamera;
+document.getElementById('scan-stop-btn').onclick = stopScanCamera;
+document.getElementById('scan-rescan-btn').onclick = function(){
+    document.getElementById('scan-result-card').style.display = 'none';
+    startScanCamera();
+};
+document.getElementById('close-scan-modal').onclick = function(){
+    stopScanCamera();
+    document.getElementById('scan-modal').style.display = 'none';
+};
+
+// Fonction d'ouverture
+window.ouvrirScannerModal = function(mode) {
+    scanMode = mode;
+    document.getElementById('scan-result-card').style.display = 'none';
+    resetScanUI();
+    scanSetStatus('');
+    document.getElementById('scan-manual-ean').value = '';
+    document.getElementById('scan-modal').style.display = 'flex';
+};
+
 // ======================================================
 
 // ===== INVENTAIRE =====
@@ -1850,261 +2070,6 @@ Object.assign(window, {
 });
 
 document.addEventListener('DOMContentLoaded', initialiser);
-</script>
-
-<!-- ====================================================== -->
-<!-- SCANNER SCRIPT - REPRISE EXACTE DE MESCOURSES          -->
-<!-- ====================================================== -->
-<script>
-(function(){
-  // Version simplifiée du scanner de MesCourses qui fonctionne avec WebAssembly
-  // Ce code est la version épurée qui fonctionne dans MesCourses
-  
-  let scanMode = null;
-  let scanProcessing = false;
-  let scanLastProduct = null;
-  let scanner = null;
-  let scanStream = null;
-  let scanVideo = null;
-
-  function scanSetStatus(msg, isError){
-    const el = document.getElementById('scan-status');
-    if(el){ el.textContent = msg || ''; el.style.color = isError ? '#c0392b' : '#888'; }
-  }
-
-  function resetScanUI(){
-    const startBtn = document.getElementById('scan-start-btn');
-    if(startBtn) startBtn.textContent = '📷 Démarrer';
-    const zone = document.getElementById('scan-zone');
-    if(zone){ zone.style.display = 'none'; zone.innerHTML = ''; }
-    if(scanStream){
-      try { scanStream.getTracks().forEach(t => t.stop()); } catch(e) {}
-      scanStream = null;
-    }
-    scanVideo = null;
-  }
-
-  async function startScanCamera(){
-    if(scanStream){ resetScanUI(); await new Promise(r => setTimeout(r, 300)); }
-
-    scanSetStatus('📷 Accès à la caméra…');
-    const zone = document.getElementById('scan-zone');
-    zone.style.display = 'block';
-    zone.innerHTML = `
-      <video id="scan-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>
-      <div class="scan-overlay">
-        <div class="scan-overlay__region">
-          <div class="scan-overlay__line"></div>
-        </div>
-      </div>
-    `;
-    const rect = zone.getBoundingClientRect();
-    zone.style.height = Math.round(rect.width * 0.75) + 'px';
-
-    try {
-      scanStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: false
-      });
-      scanVideo = document.getElementById('scan-video');
-      scanVideo.srcObject = scanStream;
-      await scanVideo.play();
-
-      document.getElementById('scan-start-btn').textContent = '📷 Scannage…';
-      scanSetStatus('🔍 Visez le code-barres…');
-
-      // Détection via l'API BarcodeDetector si disponible
-      if ('BarcodeDetector' in window) {
-        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'codabar', 'itf'] });
-        async function detectLoop() {
-          if (!scanVideo || !scanStream) return;
-          try {
-            const barcodes = await detector.detect(scanVideo);
-            if (barcodes.length > 0 && barcodes[0].rawValue) {
-              const code = barcodes[0].rawValue;
-              if (code && code.length >= 8 && !scanProcessing) {
-                onScanDetected(code);
-                return;
-              }
-            }
-          } catch(e) {}
-          if(scanStream) requestAnimationFrame(detectLoop);
-        }
-        detectLoop();
-      } else {
-        scanSetStatus('⚠️ Détection automatique non disponible, utilisez la saisie manuelle', true);
-      }
-
-    } catch(err) {
-      scanSetStatus('❌ Erreur: ' + (err.message || String(err)), true);
-      resetScanUI();
-    }
-  }
-
-  function stopScanCamera(){
-    resetScanUI();
-    scanSetStatus('🛑 Caméra arrêtée');
-  }
-
-  // Saisie manuelle
-  document.getElementById('scan-manual-ean').addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
-      const val = e.target.value.trim();
-      if (val) await onScanDetected(val);
-    }
-  });
-
-  async function onScanDetected(ean) {
-    if (scanProcessing) return;
-    scanProcessing = true;
-    if (navigator.vibrate) navigator.vibrate(80);
-    stopScanCamera();
-    scanSetStatus('🔍 Recherche du produit ' + ean + '…');
-
-    try {
-      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`);
-      const data = await res.json();
-      if (data.status !== 1) {
-        scanSetStatus('⚠️ Produit non trouvé, saisie manuelle', true);
-        renderScanResult(ean, { product_name: 'Produit ' + ean });
-        scanProcessing = false;
-        return;
-      }
-      renderScanResult(ean, data.product);
-      scanSetStatus('');
-    } catch(err) {
-      scanSetStatus('❌ Erreur réseau, saisie manuelle', true);
-      renderScanResult(ean, { product_name: 'Produit ' + ean });
-    }
-    scanProcessing = false;
-  }
-
-  function guessCategorieFromProduct(p) {
-    const hay = ((p.categories || '') + ' ' + (p.product_name_fr || p.product_name || '')).toLowerCase();
-    if (/bière|vin|whisky|vodka|rhum|pastis|champagne|cidre|porto|muscat|tequila|gin|limonade|soda|cola|jus|eau|thé|sirop|energisant/.test(hay)) return 'boisson';
-    if (/nourriture|plat|sauce|pâte|riz|pomme de terre|frite|gâteau|biscuit|pain|viennoiserie|céréale|chocolat|bonbon|confiture|miel|nutella|beurre|huile|vinaigre|sel|poivre|épice/.test(hay)) return 'nourriture';
-    return 'autre';
-  }
-
-  function renderScanResult(ean, p) {
-    const nom = p.product_name_fr || p.product_name || ('Produit ' + ean);
-    const catGuess = guessCategorieFromProduct(p);
-    scanLastProduct = {
-      nom,
-      marque: p.brands || '',
-      imageUrl: p.image_front_small_url || p.image_url || '',
-      ean,
-      nutriscore: p.nutriscore_grade || '',
-      catGuess
-    };
-
-    document.getElementById('scan-r-img').src = scanLastProduct.imageUrl || '';
-    document.getElementById('scan-r-nom').textContent = nom;
-    document.getElementById('scan-r-marque').textContent = scanLastProduct.marque || '—';
-    document.getElementById('scan-r-cat').value = catGuess;
-
-    // Vérifier le produit existant
-    const existingProd = window.data?.boissons?.find(b => b.codeBarre === ean || b.nom.toLowerCase() === nom.toLowerCase());
-    if (existingProd) {
-      document.getElementById('scan-r-prix').value = existingProd.prix || '';
-      document.getElementById('scan-r-uniteprix').value = existingProd.unite || 'unite';
-    } else {
-      document.getElementById('scan-r-prix').value = '';
-      document.getElementById('scan-r-uniteprix').value = 'unite';
-    }
-
-    document.getElementById('scan-result-card').style.display = 'block';
-  }
-
-  // Confirmer l'ajout
-  document.getElementById('scan-confirm-btn').onclick = async function() {
-    if (!scanLastProduct) return;
-    const nom = scanLastProduct.nom;
-    const type = document.getElementById('scan-r-cat').value;
-    const prix = parseFloat(document.getElementById('scan-r-prix').value);
-    const unite = document.getElementById('scan-r-uniteprix').value;
-    const codeBarre = scanLastProduct.ean;
-
-    if (!nom || !prix || prix <= 0) {
-      alert('Veuillez remplir le nom et le prix');
-      return;
-    }
-
-    // Ajouter le produit via la fonction globale
-    if (typeof window.ajouterBoissonScannee === 'function') {
-      window.ajouterBoissonScannee({ nom, type, prix, unite, codeBarre, scanMode });
-    } else {
-      alert('Fonction d\'ajout non disponible');
-    }
-    
-    document.getElementById('scan-result-card').style.display = 'none';
-    document.getElementById('scan-modal').style.display = 'none';
-  };
-
-  // Boutons
-  document.getElementById('scan-start-btn').onclick = startScanCamera;
-  document.getElementById('scan-stop-btn').onclick = stopScanCamera;
-  document.getElementById('scan-rescan-btn').onclick = function(){
-    document.getElementById('scan-result-card').style.display = 'none';
-    startScanCamera();
-  };
-  document.getElementById('close-scan-modal').onclick = function(){
-    stopScanCamera();
-    document.getElementById('scan-modal').style.display = 'none';
-  };
-
-  // Fonction d'ouverture globale
-  window.ouvrirScannerModal = function(mode) {
-    scanMode = mode;
-    document.getElementById('scan-result-card').style.display = 'none';
-    resetScanUI();
-    scanSetStatus('');
-    document.getElementById('scan-manual-ean').value = '';
-    document.getElementById('scan-modal').style.display = 'flex';
-  };
-
-  // Fonction d'ajout globale
-  window.ajouterBoissonScannee = function(item) {
-    if (typeof window.data === 'undefined' || !window.data) {
-      alert('Données non disponibles');
-      return;
-    }
-    // Ajouter au catalogue via la fonction existante
-    if (typeof window.ajouterBoissonDirect === 'function') {
-      window.ajouterBoissonDirect(item);
-    } else {
-      // Ajout direct
-      const newId = Date.now();
-      window.data.boissons.push({
-        id: newId,
-        nom: item.nom,
-        type: item.type || 'boisson',
-        prix: item.prix,
-        unite: item.unite || 'unite',
-        codeBarre: item.codeBarre,
-        stockInitial: 0,
-        dateAjout: new Date().toISOString()
-      });
-      if (typeof window.afficherBoissons === 'function') window.afficherBoissons();
-      if (typeof window.mettreAJourSelects === 'function') window.mettreAJourSelects();
-      if (typeof window.debounceSauvegarde === 'function') window.debounceSauvegarde();
-      
-      if (item.scanMode === 'achat') {
-        const sel = document.getElementById('achatBoisson');
-        if (sel) {
-          const nouveau = window.data.boissons.find(b => b.codeBarre === item.codeBarre);
-          if (nouveau) sel.value = nouveau.id;
-        }
-        alert('✅ Produit "' + item.nom + '" ajouté et sélectionné pour l\'achat');
-      } else {
-        document.getElementById('boissonCodeBarre').value = item.codeBarre;
-        alert('✅ Code-barre associé au produit "' + item.nom + '"');
-      }
-    }
-  };
-
-  console.log('Scanner MesCourses chargé avec succès !');
-})();
 </script>
 </body>
 </html>
