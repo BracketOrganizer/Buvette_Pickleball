@@ -155,6 +155,38 @@
         /* container style */
         .container { background:#f7f3ee !important; box-shadow:none !important; border-radius:0 !important; padding:0 !important; }
         .section { display:none; background:#fff; border-radius:10px; margin:16px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+
+        /* ===== RESPONSIVE MOBILE ===== */
+        @media (max-width: 640px) {
+            body { padding:0; }
+            .nav-bar { height:auto; flex-wrap:wrap; padding:8px 10px; gap:8px; }
+            .nav-brand { font-size:16px; flex-basis:auto; }
+            .nav-select-wrap { max-width:none; flex:1 1 auto; order:3; width:100%; }
+            .nav-user { display:none; }
+            .nav-r { margin-left:0; order:2; }
+            .nav-btn { padding:6px 10px; font-size:12px; }
+            .section { margin:8px; padding:12px; }
+            h1 { font-size:20px; margin-bottom:10px; }
+            h2 { font-size:17px; }
+            h3 { font-size:15px; }
+            .summary-grid { grid-template-columns: repeat(2, 1fr); gap:8px; }
+            .summary-card { padding:10px 8px; }
+            .summary-card h3 { font-size:11px; }
+            .summary-card p { font-size:16px; }
+            .stock-card { padding:10px; }
+            .stock-card > div { flex-wrap:wrap; }
+            table { font-size:13px; }
+            th, td { padding:8px 5px; }
+            .icon-btn { font-size:16px; padding:6px; }
+            .modal-content { padding:16px; width:94%; max-height:88vh; overflow-y:auto; }
+            .login-box { padding:22px 18px; }
+            .top-bar { gap:6px; }
+            .top-bar button, .top-bar .btn-small { font-size:12px; padding:9px 10px; }
+        }
+        @media (max-width: 400px) {
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+            .nav-brand { font-size:14px; }
+        }
         </style>
 </head>
 <body>
@@ -284,6 +316,7 @@
             <div class="summary-card"><h3>En Stock</h3><p id="totalEnStock">0</p></div>
             <div class="summary-card"><h3>Rupture</h3><p id="totalRupture">0</p></div>
         </div>
+        <button class="no-print btn-info" id="btnOuvrirInventaire" style="display:none;" onclick="ouvrirInventaireModal()"><i class="fas fa-clipboard-check"></i> Inventaire de fin de saison</button>
         <h3>Détail par produit</h3>
         <div id="listeStock"></div>
     </div>
@@ -483,6 +516,26 @@
         <div class="modal-buttons">
             <button class="btn-danger" onclick="reinitialiserDonnees()"><i class="fas fa-check"></i> Archiver et réinitialiser</button>
             <button class="btn-warning" onclick="fermerModal()"><i class="fas fa-times"></i> Annuler</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Inventaire de fin de saison -->
+<div id="inventaireModal" class="modal no-print">
+    <div class="modal-content" style="text-align:left;max-width:520px;max-height:85vh;overflow-y:auto;">
+        <h3 style="text-align:center;">🗓️ Inventaire de fin de saison</h3>
+        <p style="margin:12px 0;font-size:14px;color:#555;">
+            Comptez le stock physique restant de chaque produit et corrigez si besoin la quantité théorique ci-dessous.
+            La saison actuelle sera <strong>archivée</strong> (comme une réinitialisation classique), puis une nouvelle saison démarrera avec les quantités que vous validez ici déjà en stock — sans qu'elles soient comptées comme un nouvel achat.
+        </p>
+        <div class="form-group">
+            <label for="inventaireArchiveNom">Nom de la saison qui se termine (pour l'historique)</label>
+            <input type="text" id="inventaireArchiveNom" placeholder="Ex: Saison 2025-2026">
+        </div>
+        <div id="listeInventaire" style="display:flex;flex-direction:column;gap:8px;margin:12px 0;"></div>
+        <div class="modal-buttons">
+            <button class="btn-success" onclick="validerInventaireEtNouvelleSaison()"><i class="fas fa-check"></i> Valider et démarrer la nouvelle saison</button>
+            <button class="btn-warning" onclick="fermerInventaireModal()"><i class="fas fa-times"></i> Annuler</button>
         </div>
     </div>
 </div>
@@ -782,7 +835,7 @@ function ajouterBoisson() {
     const prix = parseFloat(document.getElementById('boissonPrix').value);
     const unite = document.getElementById('boissonUnite').value;
     if (!nom || !prix || prix <= 0) { alert('❌ Veuillez remplir tous les champs'); return; }
-    data.boissons.push({ id: Date.now(), nom, type, prix, unite, dateAjout: new Date().toISOString() });
+    data.boissons.push({ id: Date.now(), nom, type, prix, unite, stockInitial: 0, dateAjout: new Date().toISOString() });
     document.getElementById('boissonNom').value = ''; document.getElementById('boissonPrix').value = '';
     afficherBoissons(); mettreAJourSelects(); debounceSauvegarde();
 }
@@ -853,11 +906,11 @@ function supprimerBoisson(id) {
 // ===== STOCK =====
 function calculerStock() {
     const stock = {};
-    data.boissons.forEach(b => { stock[b.id] = { nom:b.nom, type:b.type, unite:b.unite, prix:b.prix, achatTotal:0, venteTotal:0, offertTotal:0, stockRestant:0 }; });
+    data.boissons.forEach(b => { stock[b.id] = { nom:b.nom, type:b.type, unite:b.unite, prix:b.prix, stockInitial:(b.stockInitial||0), achatTotal:0, venteTotal:0, offertTotal:0, stockRestant:0 }; });
     data.achats.forEach(a => { if(stock[a.boissonId]) stock[a.boissonId].achatTotal += a.quantite; });
     data.ventes.forEach(v => { if(stock[v.boissonId]) stock[v.boissonId].venteTotal += v.quantite; });
     data.offerts.forEach(o => { if(stock[o.boissonId]) stock[o.boissonId].offertTotal += o.quantite; });
-    Object.keys(stock).forEach(id => { stock[id].stockRestant = stock[id].achatTotal - stock[id].venteTotal - stock[id].offertTotal; });
+    Object.keys(stock).forEach(id => { stock[id].stockRestant = stock[id].stockInitial + stock[id].achatTotal - stock[id].venteTotal - stock[id].offertTotal; });
     return stock;
 }
 function afficherStock() {
@@ -875,7 +928,7 @@ function afficherStock() {
             <div style="text-align:right;display:flex;align-items:center;gap:10px;">
                 <div>
                     <p style="margin:0;font-size:18px;font-weight:bold;color:${item.stockRestant<=0?'#e74c3c':item.stockRestant<=10?'#f39c12':'#27ae60'}">${item.stockRestant} ${item.unite}</p>
-                    <p style="margin:0;font-size:12px;color:#666;">Acheté: ${item.achatTotal} | Vendu: ${item.venteTotal} | Offert: ${item.offertTotal}</p>
+                    <p style="margin:0;font-size:12px;color:#666;">${item.stockInitial>0?('Report: '+item.stockInitial+' | '):''}Acheté: ${item.achatTotal} | Vendu: ${item.venteTotal} | Offert: ${item.offertTotal}</p>
                 </div>
                 <button class="icon-btn delete-btn no-print" style="width:auto;font-size:20px;" title="Supprimer ce produit" onclick="supprimerBoisson(${id})"><i class="fas fa-trash"></i></button>
             </div></div>`;
@@ -1439,7 +1492,7 @@ async function updateUIForUser(user) {
     if (user) {
         // ── Utilisateur Firebase connecté ──────────────────────────────
         currentUser = user; isVisitor = false;
-        const adminEmails = ["yves.cerisier@orange.fr","bracket.organizer@gmail.com","quinquin44@gmail.com","checheux@gmail.com"];
+        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","checheux@gmail.com"];
         isAdmin = adminEmails.map(normaliserEmail).includes(normaliserEmail(user.email));
 
         if (isAdmin) {
