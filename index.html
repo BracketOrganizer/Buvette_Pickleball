@@ -1105,12 +1105,14 @@ function ouvrirScanner(mode) {
 }
 
 function arreterScanner() {
-  if (quaggaInstance) {
+  if (typeof Quagga === 'undefined') {
+    // Quagga non chargé : on ne fait rien
+    return;
+  }
+  try {
     Quagga.stop();
-    quaggaInstance = null;
-  } else {
-    // Au cas où on a appelé start() sans garder la référence
-    Quagga.stop();
+  } catch (e) {
+    console.warn(' arreterScanner : Quagga.stop() a échoué', e);
   }
 }
 
