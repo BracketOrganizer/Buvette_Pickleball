@@ -557,6 +557,10 @@
         <h3 style="text-align:center;">📷 Scanner un code-barre</h3>
         <div id="scannerReader"></div>
         <p id="scannerStatus" style="font-size:13px;color:#888;min-height:18px;margin-top:10px;">Initialisation...</p>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <input type="text" id="scannerManuelInput" placeholder="Ou saisissez le code manuellement" inputmode="numeric" style="flex:1;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;" onkeydown="if(event.key==='Enter'){event.preventDefault();validerCodeManuel();}">
+            <button type="button" class="btn-scan" style="padding:0 14px;" onclick="validerCodeManuel()"><i class="fas fa-check"></i></button>
+        </div>
         <div id="scannerAssignZone" style="display:none;text-align:left;margin-top:10px;">
             <p style="font-size:13px;color:#856404;margin-bottom:8px;">Code inconnu : <strong id="scannerCodeInconnu"></strong></p>
             <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Associer ce code à un produit existant</label>
@@ -1074,6 +1078,8 @@ function ouvrirScanner(context) {
     scannerDernierCode = null;
     const zone = document.getElementById('scannerAssignZone');
     if (zone) { zone.style.display = 'none'; zone.dataset.code = ''; }
+    const manuelInput = document.getElementById('scannerManuelInput');
+    if (manuelInput) manuelInput.value = '';
     const statusEl = document.getElementById('scannerStatus');
     if (statusEl) statusEl.textContent = 'Initialisation de la caméra...';
     document.getElementById('scannerModal').style.display = 'flex';
@@ -1088,8 +1094,12 @@ function ouvrirScanner(context) {
                 Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
                 Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
                 Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.CODABAR, Html5QrcodeSupportedFormats.ITF,
                 Html5QrcodeSupportedFormats.QR_CODE
             ],
+            // Utilise le détecteur natif du téléphone quand il existe (bien plus fiable
+            // sur les codes-barres 1D que le décodeur JS pur utilisé en repli).
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true },
             verbose: false
         });
     } catch(e) {
@@ -1101,11 +1111,26 @@ function ouvrirScanner(context) {
         const cam = cams.find(c => /back|rear|environment/i.test(c.label || '')) || cams[cams.length - 1];
         html5QrCode.start(
             cam.id,
-            { fps: 10, qrbox: { width: 260, height: 140 } },
+            {
+                fps: 10,
+                qrbox: (viewfinderWidth, viewfinderHeight) => {
+                    // Zone de visée large et basse, adaptée aux codes-barres 1D
+                    const w = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.9);
+                    return { width: Math.min(viewfinderWidth * 0.9, 320), height: Math.max(w * 0.45, 100) };
+                },
+                aspectRatio: 1.333334,
+                disableFlip: false,
+                videoConstraints: {
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    advanced: [{ focusMode: 'continuous' }]
+                }
+            },
             (decodedText) => onCodeScanne(decodedText),
             () => {} // échecs de lecture image par image : ignorés en silence
         ).then(() => {
-            if (statusEl) statusEl.textContent = '📷 Visez le code-barre du produit';
+            if (statusEl) statusEl.textContent = '📷 Visez le code-barre bien à plat, à ~10-15 cm';
         }).catch(e => {
             if (statusEl) statusEl.textContent = '❌ Erreur d\'accès à la caméra : ' + (e.message || e);
         });
@@ -1122,6 +1147,14 @@ function fermerScanner() {
     html5QrCode = null;
     document.getElementById('scannerModal').style.display = 'none';
     scannerContext = null;
+}
+function validerCodeManuel() {
+    const input = document.getElementById('scannerManuelInput');
+    const code = input ? input.value.trim() : '';
+    if (!code) return;
+    scannerDernierCode = null; // force le traitement même si identique au dernier scan caméra
+    onCodeScanne(code);
+    if (input) input.value = '';
 }
 function onCodeScanne(code) {
     if (scannerDernierCode === code) return; // évite les lectures en rafale du même code
@@ -1931,7 +1964,7 @@ Object.assign(window, {
     ajouterOffert, supprimerOffert, activerEditionOffert, annulerEditionOffert, sauvegarderModificationOffert,
     trierVentes, trierAchats, trierApports, trierRemboursements, trierOfferts,
     chargerArchives, voirArchive, fermerArchiveDetailModal, exporterArchive, exporterArchiveOuverte, supprimerArchive,
-    ouvrirScanner, fermerScanner, associerCodeBarreScanne,
+    ouvrirScanner, fermerScanner, associerCodeBarreScanne, validerCodeManuel,
     ouvrirInventaireModal, fermerInventaireModal, validerInventaireEtNouvelleSaison
 });
 
