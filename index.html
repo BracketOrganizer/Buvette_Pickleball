@@ -188,6 +188,21 @@
             .summary-grid { grid-template-columns: 1fr 1fr; }
             .nav-brand { font-size:14px; }
         }
+        @media (max-width: 480px) {
+            /* Boutons de modales empilés et pleine largeur : plus faciles à toucher, texte jamais coupé */
+            .modal-buttons { flex-direction:column; }
+            .modal-buttons button { width:100%; }
+            /* Cibles tactiles plus grandes pour les icônes d'action (édition/suppression) */
+            .icon-btn { min-width:40px; min-height:40px; font-size:17px; }
+            .action-icons { gap:8px; }
+            /* Champs de saisie un peu plus généreux au doigt, sans jamais déclencher le zoom iOS (16px min) */
+            input, select { padding:13px 12px; font-size:16px; }
+            label { font-size:13px; }
+            .form-group { margin-bottom:14px; }
+            /* Formulaires admin (utilisateurs) : un champ par ligne pour rester lisible */
+            #utilisateurs .form-group { min-width:100% !important; }
+            #utilisateurs > div > div[style*="align-items:flex-end"] { align-items:stretch !important; }
+        }
         /* ===== SCANNER CODE-BARRE ===== */
         .field-with-scan { display:flex; gap:8px; align-items:stretch; }
         .field-with-scan select, .field-with-scan input { flex:1; min-width:0; }
@@ -1002,6 +1017,178 @@ function afficherStock() {
     document.getElementById('totalRupture').textContent = rupture;
 }
 
+// ===== SCANNER CODE-BARRE =====
+let html5QrCode = null;
+let scannerMode = null; // 'achat' ou 'boisson'
+let dernierCodeScanne = null, dernierScanTimestamp = 0;
+
+function ouvrirScanner(mode) {
+    scannerMode = mode;
+    const modal = document.getElementById('scannerModal');
+    const status = document.getElementById('scannerStatus');
+    const assignZone = document.getElementById('scannerAssignZone');
+    if (assignZone) assignZone.style.display = 'none';
+    if (status) { status.style.color = '#888'; status.textContent = 'Initialisation de la caméra...'; }
+    if (modal) modal.style.display = 'flex';
+    if (typeof Html5Qrcode === 'undefined') {
+        if (status) status.textContent = '❌ Bibliothèque de scan non chargée (vérifiez la connexion internet).';
+        return;
+    }
+    try { html5QrCode = new Html5Qrcode('scannerReader'); }
+    catch(e) { if (status) status.textContent = '❌ Erreur d\'initialisation du scanner.'; return; }
+    const config = { fps: 10, qrbox: { width: 260, height: 140 } };
+    html5QrCode.start({ facingMode: 'environment' }, config, onCodeScanne, () => {})
+        .then(() => { if (status) status.textContent = '📷 Visez le code-barre du produit...'; })
+        .catch(err => {
+            console.error(err);
+            if (status) status.textContent = '❌ Impossible d\'accéder à la caméra. Vérifiez les autorisations du navigateur.';
+        });
+}
+function arreterScanner() {
+    if (html5QrCode) {
+        const inst = html5QrCode;
+        html5QrCode = null;
+        inst.stop().then(() => inst.clear()).catch(() => {});
+    }
+}
+function fermerScanner() {
+    arreterScanner();
+    const modal = document.getElementById('scannerModal');
+    if (modal) modal.style.display = 'none';
+    const assignZone = document.getElementById('scannerAssignZone');
+    if (assignZone) assignZone.style.display = 'none';
+    scannerMode = null;
+}
+function onCodeScanne(code) {
+    // Anti-rebond : ignorer les scans répétés du même code en moins de 2s
+    const now = Date.now();
+    if (code === dernierCodeScanne && (now - dernierScanTimestamp) < 2000) return;
+    dernierCodeScanne = code; dernierScanTimestamp = now;
+
+    const produit = data.boissons.find(b => b.codeBarre === code);
+    if (produit) {
+        if (scannerMode === 'achat') {
+            const sel = document.getElementById('achatBoisson');
+            if (sel) sel.value = produit.id;
+        } else if (scannerMode === 'boisson') {
+            const inp = document.getElementById('boissonCodeBarre');
+            if (inp) inp.value = code;
+        }
+        fermerScanner();
+        return;
+    }
+    // Code inconnu
+    if (scannerMode === 'boisson') {
+        // En mode ajout produit, on renseigne directement le champ, l'utilisateur validera le formulaire
+        const inp = document.getElementById('boissonCodeBarre');
+        if (inp) inp.value = code;
+        fermerScanner();
+        return;
+    }
+    // En mode achat : proposer d'associer ce code à un produit existant du catalogue
+    arreterScanner();
+    const status = document.getElementById('scannerStatus');
+    if (status) { status.style.color = '#856404'; status.textContent = 'Code inconnu — associez-le à un produit :'; }
+    const zone = document.getElementById('scannerAssignZone');
+    const codeSpan = document.getElementById('scannerCodeInconnu');
+    const sel = document.getElementById('scannerAssignSelect');
+    if (codeSpan) codeSpan.textContent = code;
+    if (sel) {
+        sel.innerHTML = '';
+        data.boissons.forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.nom; sel.appendChild(o); });
+    }
+    if (zone) { zone.style.display = 'block'; zone.dataset.code = code; }
+}
+function associerCodeBarreScanne() {
+    const zone = document.getElementById('scannerAssignZone');
+    const code = zone ? zone.dataset.code : null;
+    const sel = document.getElementById('scannerAssignSelect');
+    if (!code || !sel || !sel.value) return;
+    const boissonId = parseInt(sel.value);
+    if (data.boissons.some(b => b.codeBarre === code)) {
+        alert('❌ Ce code est déjà associé à un autre produit.'); return;
+    }
+    const b = data.boissons.find(x => x.id === boissonId);
+    if (b) {
+        b.codeBarre = code;
+        afficherBoissons(); debounceSauvegarde();
+        if (scannerMode === 'achat') {
+            const selAchat = document.getElementById('achatBoisson');
+            if (selAchat) selAchat.value = boissonId;
+        }
+    }
+    fermerScanner();
+}
+
+// ===== INVENTAIRE DE FIN DE SAISON =====
+function ouvrirInventaireModal() {
+    if (!isAdmin) return;
+    const stock = calculerStock();
+    const cont = document.getElementById('listeInventaire');
+    if (!cont) return;
+    cont.innerHTML = '';
+    const idsTries = Object.keys(stock).sort((a,b) => stock[a].nom.localeCompare(stock[b].nom, 'fr'));
+    if (!idsTries.length) {
+        cont.innerHTML = '<p style="color:#999;">Aucun produit dans le catalogue.</p>';
+    }
+    idsTries.forEach(id => {
+        const item = stock[id];
+        const row = document.createElement('div');
+        row.className = 'inv-row';
+        row.innerHTML = `
+            <div>
+                <strong>${item.nom}</strong><br>
+                <small style="color:#888;">Stock théorique : ${item.stockRestant} ${item.unite}</small>
+            </div>
+            <input type="number" id="inv-compte-${id}" value="${Math.max(0, item.stockRestant)}" min="0" inputmode="numeric">
+        `;
+        cont.appendChild(row);
+    });
+    const nomInput = document.getElementById('inventaireArchiveNom');
+    if (nomInput) nomInput.value = 'Saison jusqu\'au ' + new Date().toLocaleDateString('fr-FR');
+    const modal = document.getElementById('inventaireModal');
+    if (modal) modal.style.display = 'flex';
+}
+function fermerInventaireModal() {
+    const modal = document.getElementById('inventaireModal');
+    if (modal) modal.style.display = 'none';
+}
+async function validerInventaireEtNouvelleSaison() {
+    if (!db || !isAdmin) return;
+    const nomInput = document.getElementById('inventaireArchiveNom');
+    const nom = (nomInput && nomInput.value.trim()) || ('Saison jusqu\'au ' + new Date().toLocaleDateString('fr-FR'));
+    if (!confirm('Confirmer l\'inventaire et démarrer une nouvelle saison ?\n\nLa saison actuelle sera archivée et le stock physique compté sera reporté sur la nouvelle saison.')) return;
+    try {
+        // 1. Récupérer les quantités comptées pour chaque produit
+        const comptages = {};
+        data.boissons.forEach(b => {
+            const inp = document.getElementById(`inv-compte-${b.id}`);
+            comptages[b.id] = inp ? Math.max(0, parseInt(inp.value) || 0) : 0;
+        });
+        // 2. Archiver la saison actuelle (même principe qu'une réinitialisation classique)
+        const archiveId = 'archive_' + Date.now();
+        const archive = {
+            type: 'archive',
+            nom,
+            dateArchivage: new Date().toISOString(),
+            apports: data.apports, achats: data.achats, ventes: data.ventes,
+            remboursements: data.remboursements, offerts: data.offerts,
+            boissonsSnapshot: data.boissons
+        };
+        await setDoc(doc(db, 'buvette', archiveId), archive);
+        // 3. Nouvelle saison : le catalogue est conservé, le stock initial = quantité physique comptée
+        //    (ces produits restent utilisables la saison suivante sans être comptés comme un nouvel achat)
+        const nouvellesBoissons = data.boissons.map(b => ({ ...b, stockInitial: comptages[b.id] || 0 }));
+        data = { apports: [], boissons: nouvellesBoissons, achats: [], ventes: [], remboursements: [], offerts: [] };
+        afficherToutesLesDonnees(); mettreAJourSelects(); fermerInventaireModal();
+        await sauvegarderDonnees();
+        alert('🗓️ Saison "' + nom + '" archivée. Nouvelle saison démarrée avec le stock physique compté !');
+    } catch(e) {
+        console.error(e);
+        alert('❌ Erreur lors de l\'archivage de l\'inventaire. Rien n\'a été réinitialisé.\n\nDétail technique : ' + (e.code || '') + ' ' + (e.message || e));
+    }
+}
+
 // ===== NAVIGATION =====
 function changerSection(sectionId) {
     // Bloquer l'accès à utilisateurs pour les visiteurs
@@ -1570,6 +1757,8 @@ async function updateUIForUser(user) {
             document.body.classList.remove('readonly-mode','saisie-mode');
             const topBarAdmin = document.querySelector('.top-bar');
             if(topBarAdmin) topBarAdmin.style.display = 'flex';
+            const btnInvAdmin = document.getElementById('btnOuvrirInventaire');
+            if(btnInvAdmin) btnInvAdmin.style.display = 'block';
             masquerLogin();
             afficherToutesLesDonnees(); mettreAJourSelects();
             changerSection('ventes');
@@ -1600,6 +1789,8 @@ async function updateUIForUser(user) {
                     document.body.classList.add('saisie-mode');
                     const topBarSaisie = document.querySelector('.top-bar');
                     if(topBarSaisie) topBarSaisie.style.display = 'none';
+                    const btnInvSaisie = document.getElementById('btnOuvrirInventaire');
+                    if(btnInvSaisie) btnInvSaisie.style.display = 'none';
                     masquerLogin();
                     afficherToutesLesDonnees(); mettreAJourSelects();
                     startRealtimeSync();
@@ -1632,6 +1823,8 @@ async function updateUIForUser(user) {
         document.body.classList.remove('saisie-mode');
         const topBarVisitor = document.querySelector('.top-bar');
         if(topBarVisitor) topBarVisitor.style.display = 'none';
+        const btnInvVisitor = document.getElementById('btnOuvrirInventaire');
+        if(btnInvVisitor) btnInvVisitor.style.display = 'none';
         masquerLogin();
         afficherToutesLesDonnees(); mettreAJourSelects();
         changerSection('ventes');
@@ -1647,6 +1840,8 @@ async function updateUIForUser(user) {
         if(usersSection) usersSection.style.display = 'none';
         document.body.classList.add('readonly-mode');
         document.body.classList.remove('saisie-mode');
+        const btnInvLogout = document.getElementById('btnOuvrirInventaire');
+        if(btnInvLogout) btnInvLogout.style.display = 'none';
         afficherLogin();
     }
 }
@@ -1753,7 +1948,9 @@ Object.assign(window, {
     ajouterBoisson, supprimerBoisson, activerEditionBoisson, annulerEditionBoisson, sauvegarderModificationBoisson,
     ajouterOffert, supprimerOffert, activerEditionOffert, annulerEditionOffert, sauvegarderModificationOffert,
     trierVentes, trierAchats, trierApports, trierRemboursements, trierOfferts,
-    chargerArchives, voirArchive, fermerArchiveDetailModal, exporterArchive, exporterArchiveOuverte, supprimerArchive
+    chargerArchives, voirArchive, fermerArchiveDetailModal, exporterArchive, exporterArchiveOuverte, supprimerArchive,
+    ouvrirScanner, fermerScanner, associerCodeBarreScanne,
+    ouvrirInventaireModal, fermerInventaireModal, validerInventaireEtNouvelleSaison
 });
 
 document.addEventListener('DOMContentLoaded', initialiser);
