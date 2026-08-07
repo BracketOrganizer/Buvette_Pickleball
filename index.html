@@ -456,6 +456,16 @@
             </div>
             <div id="addUserMsg" style="margin-top:8px;font-size:13px;text-align:center;min-height:16px;"></div>
         </div>
+        <div style="background:#f0f7ff;border-radius:10px;padding:16px;margin-bottom:20px;border:1px solid #cfe2ff;">
+            <h3 style="margin-bottom:6px;">🔵 Autoriser un compte Google existant</h3>
+            <p style="color:#888;margin-bottom:12px;font-size:13px;">Pour les vendeurs qui se connectent avec le bouton "Connexion Google" (pas de mot de passe à gérer).</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+                <div class="form-group" style="flex:1;min-width:180px;margin:0;"><label for="newGoogleUserEmail">Email Google</label><input id="newGoogleUserEmail" type="email" placeholder="prenom@gmail.com"></div>
+                <div class="form-group" style="flex:1;min-width:120px;margin:0;"><label for="newGoogleUserName">Nom (optionnel)</label><input id="newGoogleUserName" type="text" placeholder="Jean Dupont"></div>
+                <button onclick="addGoogleUser()" class="btn-info" style="white-space:nowrap;">🔵 Autoriser</button>
+            </div>
+            <div id="addGoogleUserMsg" style="margin-top:8px;font-size:13px;text-align:center;min-height:16px;"></div>
+        </div>
         <h3 style="margin-bottom:12px;">📋 Utilisateurs autorisés</h3>
         <div id="usersList"><p style="color:#888;text-align:center;padding:20px;">Chargement...</p></div>
     </div>
@@ -479,7 +489,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -1317,13 +1327,32 @@ async function addUser() {
         const secAuth = getAuth(getSecondaryApp());
         const result = await createUserWithEmailAndPassword(secAuth, email, password);
         await signOut(secAuth);
-        await setDoc(doc(db, 'authorizedUsers', result.user.uid), { email, name, createdAt: new Date().toISOString(), createdBy: currentUser?.email||'admin', role: 'saisie' });
+        await setDoc(doc(db, 'authorizedUsers', result.user.uid), { email: email.toLowerCase(), name, createdAt: new Date().toISOString(), createdBy: currentUser?.email||'admin', role: 'saisie' });
         if(msgEl) { msgEl.style.color='#27ae60'; msgEl.textContent=`✅ ${email} ajouté !`; }
         document.getElementById('newUserEmail').value=''; document.getElementById('newUserPassword').value=''; document.getElementById('newUserName').value='';
         loadUsersList();
     } catch(e) {
         const m = e.code==='auth/email-already-in-use'?'⚠️ Email déjà utilisé':e.code==='auth/invalid-email'?'⚠️ Email invalide':'❌ '+e.message;
         if(msgEl) { msgEl.style.color='#e74c3c'; msgEl.textContent=m; }
+    }
+}
+async function addGoogleUser() {
+    const emailRaw = document.getElementById('newGoogleUserEmail')?.value?.trim();
+    const name = document.getElementById('newGoogleUserName')?.value?.trim() || '';
+    const msgEl = document.getElementById('addGoogleUserMsg');
+    if (!emailRaw) { if(msgEl){ msgEl.style.color='#e74c3c'; msgEl.textContent='⚠️ Email requis'; } return; }
+    const email = emailRaw.toLowerCase();
+    if(msgEl) { msgEl.style.color='#888'; msgEl.textContent='⏳ Ajout...'; }
+    try {
+        // Pas de compte Firebase Auth créé ici : on autorise juste cet email à se connecter
+        // via son propre compte Google. L'UID sera lié automatiquement à sa première connexion.
+        const ref = doc(collection(db, 'authorizedUsers'));
+        await setDoc(ref, { email, name, createdAt: new Date().toISOString(), createdBy: currentUser?.email||'admin', role: 'saisie', method: 'google' });
+        if(msgEl) { msgEl.style.color='#27ae60'; msgEl.textContent=`✅ ${email} peut maintenant se connecter avec Google !`; }
+        document.getElementById('newGoogleUserEmail').value=''; document.getElementById('newGoogleUserName').value='';
+        loadUsersList();
+    } catch(e) {
+        if(msgEl) { msgEl.style.color='#e74c3c'; msgEl.textContent='❌ '+e.message; }
     }
 }
 async function loadUsersList() {
@@ -1334,7 +1363,8 @@ async function loadUsersList() {
         let html='<table style="width:100%;border-collapse:collapse;font-size:14px;"><thead><tr style="border-bottom:2px solid #dee2e6;"><th style="padding:8px;text-align:left;">Email</th><th style="padding:8px;text-align:left;">Nom</th><th style="padding:8px;text-align:left;">Ajouté le</th><th style="padding:8px;text-align:center;">Action</th></tr></thead><tbody>';
         snap.forEach(d => {
             const u=d.data(); const date=u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR'):'—';
-            html+=`<tr style="border-bottom:1px solid #dee2e6;"><td style="padding:8px;">${u.email}</td><td style="padding:8px;color:#888;">${u.name||'—'}</td><td style="padding:8px;color:#888;">${date}</td><td style="padding:8px;text-align:center;"><button onclick="removeUser('${d.id}','${u.email}')" style="padding:4px 10px;border-radius:6px;border:none;background:#e74c3c;color:#fff;cursor:pointer;font-size:12px;">🗑️ Retirer</button></td></tr>`;
+            const badge = u.method==='google' ? '<span style="background:#4285F4;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;margin-left:6px;">Google</span>' : '';
+            html+=`<tr style="border-bottom:1px solid #dee2e6;"><td style="padding:8px;">${u.email}${badge}</td><td style="padding:8px;color:#888;">${u.name||'—'}</td><td style="padding:8px;color:#888;">${date}</td><td style="padding:8px;text-align:center;"><button onclick="removeUser('${d.id}','${u.email}')" style="padding:4px 10px;border-radius:6px;border:none;background:#e74c3c;color:#fff;cursor:pointer;font-size:12px;">🗑️ Retirer</button></td></tr>`;
         });
         html+='</tbody></table>'; listEl.innerHTML=html;
     } catch(e) { listEl.innerHTML='<p style="color:#e74c3c;text-align:center;">Erreur de chargement</p>'; }
@@ -1374,10 +1404,18 @@ async function updateUIForUser(user) {
             startRealtimeSync();
             chargerCodeVisiteur();
         } else {
-            // Vérifier que l'utilisateur est dans authorizedUsers
+            // Vérifier que l'utilisateur est dans authorizedUsers (par UID, ou par email pour les comptes Google autorisés à l'avance)
             try {
+                let autorise = false;
                 const snap = await getDoc(doc(db, 'authorizedUsers', user.uid));
                 if (snap.exists()) {
+                    autorise = true;
+                } else if (user.email) {
+                    const q = query(collection(db, 'authorizedUsers'), where('email', '==', user.email.toLowerCase()));
+                    const qSnap = await getDocs(q);
+                    if (!qSnap.empty) autorise = true;
+                }
+                if (autorise) {
                     isSaisie = true;
                     if(userEmailSpan) userEmailSpan.innerHTML = '<span style="background:#3498db;color:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">✏️ Vendeur</span>';
                     if(logoutBtn)    logoutBtn.style.display    = 'inline-block';
@@ -1523,7 +1561,7 @@ getRedirectResult(auth).catch((e) => {
 
 // Exposer tout en global
 Object.assign(window, {
-    toggleLoginPanel, loginWithGoogle, loginWithEmail, addUser, removeUser,
+    toggleLoginPanel, loginWithGoogle, loginWithEmail, addUser, addGoogleUser, removeUser,
     ouvrirModalVisiteur, fermerModalVisiteur, validerCodeVisiteur, regenererCode, afficherFormVisiteur, cacherFormVisiteur,
     doLogout: async () => { if(isVisitor){ isVisitor=false; await updateUIForUser(null); } else { await signOut(auth); } },
     sauvegarderDonnees, imprimerDonnees, exporterDonnees, importerDonnees,
