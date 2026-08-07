@@ -495,6 +495,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
 
 let isAdmin = false, isSaisie = false, isVisitor = false, currentUser = null, secondaryApp = null, unsubscribeSnapshot = null;
 let data = { apports: [], boissons: [], achats: [], ventes: [], remboursements: [], offerts: [] };
