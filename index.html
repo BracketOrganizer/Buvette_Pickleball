@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quagga@1.6.0/dist/quagga.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7f3ee; min-height: 100vh; padding: 10px; }
@@ -1017,107 +1018,198 @@ function afficherStock() {
     document.getElementById('totalRupture').textContent = rupture;
 }
 
-// ===== SCANNER CODE-BARRE =====
-let html5QrCode = null;
+// SCANNER CODE-BARRE (QuaggaJS pour EAN-13 / code-barres 1D)
 let scannerMode = null; // 'achat' ou 'boisson'
 let dernierCodeScanne = null, dernierScanTimestamp = 0;
+let quaggaInstance = null;
 
 function ouvrirScanner(mode) {
-    scannerMode = mode;
-    const modal = document.getElementById('scannerModal');
-    const status = document.getElementById('scannerStatus');
-    const assignZone = document.getElementById('scannerAssignZone');
-    if (assignZone) assignZone.style.display = 'none';
-    if (status) { status.style.color = '#888'; status.textContent = 'Initialisation de la caméra...'; }
-    if (modal) modal.style.display = 'flex';
-    if (typeof Html5Qrcode === 'undefined') {
-        if (status) status.textContent = '❌ Bibliothèque de scan non chargée (vérifiez la connexion internet).';
-        return;
-    }
-    try { html5QrCode = new Html5Qrcode('scannerReader'); }
-    catch(e) { if (status) status.textContent = '❌ Erreur d\'initialisation du scanner.'; return; }
-    const config = { fps: 10, qrbox: { width: 260, height: 140 } };
-    html5QrCode.start({ facingMode: 'environment' }, config, onCodeScanne, () => {})
-        .then(() => { if (status) status.textContent = '📷 Visez le code-barre du produit...'; })
-        .catch(err => {
-            console.error(err);
-            if (status) status.textContent = '❌ Impossible d\'accéder à la caméra. Vérifiez les autorisations du navigateur.';
-        });
-}
-function arreterScanner() {
-    if (html5QrCode) {
-        const inst = html5QrCode;
-        html5QrCode = null;
-        inst.stop().then(() => inst.clear()).catch(() => {});
-    }
-}
-function fermerScanner() {
-    arreterScanner();
-    const modal = document.getElementById('scannerModal');
-    if (modal) modal.style.display = 'none';
-    const assignZone = document.getElementById('scannerAssignZone');
-    if (assignZone) assignZone.style.display = 'none';
-    scannerMode = null;
-}
-function onCodeScanne(code) {
-    // Anti-rebond : ignorer les scans répétés du même code en moins de 2s
-    const now = Date.now();
-    if (code === dernierCodeScanne && (now - dernierScanTimestamp) < 2000) return;
-    dernierCodeScanne = code; dernierScanTimestamp = now;
+  scannerMode = mode;
 
-    const produit = data.boissons.find(b => b.codeBarre === code);
-    if (produit) {
-        if (scannerMode === 'achat') {
-            const sel = document.getElementById('achatBoisson');
-            if (sel) sel.value = produit.id;
-        } else if (scannerMode === 'boisson') {
-            const inp = document.getElementById('boissonCodeBarre');
-            if (inp) inp.value = code;
+  const modal = document.getElementById('scannerModal');
+  const status = document.getElementById('scannerStatus');
+  const assignZone = document.getElementById('scannerAssignZone');
+
+  if (assignZone) assignZone.style.display = 'none';
+  if (status) {
+    status.style.color = '#888';
+    status.textContent = 'Initialisation de la caméra...';
+  }
+  if (modal) modal.style.display = 'flex';
+
+  // Nettoyer une instance précédente
+  if (quaggaInstance) {
+    Quagga.stop();
+    quaggaInstance = null;
+  }
+
+  const container = document.getElementById('scannerReader');
+  if (!container) {
+    if (status) status.textContent = 'Zone de scan introuvable (scannerReader).';
+    return;
+  }
+  container.innerHTML = ''; // Quagga injecte lui-même la vidéo/canvas
+
+  if (typeof Quagga === 'undefined') {
+    if (status) status.textContent = 'Bibliothèque Quagga non chargée, vérifiez la connexion internet.';
+    return;
+  }
+
+  // Configuration pour EAN-13 et code-barres 1D classiques
+  Quagga.init(
+    {
+      inputStream: {
+        name: 'Live',
+        type: 'LiveStream',
+        target: container,
+        constraints: {
+          facingMode: 'environment',
+          width: { min: 640 },
+          height: { min: 480 }
         }
-        fermerScanner();
+      },
+      decoder: {
+        readers: [
+          'ean_reader',
+          'ean_8_reader',
+          'code_128_reader',
+          'code_39_reader',
+          'code_39_vin_reader',
+          'generic_code_reader',
+          'upc_reader',
+          'upc_e_reader',
+          'i2of5_reader'
+        ]
+      },
+      locator: {
+        patchSize: 'medium',
+        halfSample: true
+      }
+    },
+    function (err) {
+      if (err) {
+        console.error(err);
+        if (status) status.textContent = 'Erreur d’initialisation du scanner.';
         return;
+      }
+      if (status) status.textContent = 'Visez le code-barre du produit...';
+      Quagga.start();
     }
-    // Code inconnu
-    if (scannerMode === 'boisson') {
-        // En mode ajout produit, on renseigne directement le champ, l'utilisateur validera le formulaire
-        const inp = document.getElementById('boissonCodeBarre');
-        if (inp) inp.value = code;
-        fermerScanner();
-        return;
-    }
-    // En mode achat : proposer d'associer ce code à un produit existant du catalogue
-    arreterScanner();
-    const status = document.getElementById('scannerStatus');
-    if (status) { status.style.color = '#856404'; status.textContent = 'Code inconnu — associez-le à un produit :'; }
-    const zone = document.getElementById('scannerAssignZone');
-    const codeSpan = document.getElementById('scannerCodeInconnu');
-    const sel = document.getElementById('scannerAssignSelect');
-    if (codeSpan) codeSpan.textContent = code;
-    if (sel) {
-        sel.innerHTML = '';
-        data.boissons.forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.nom; sel.appendChild(o); });
-    }
-    if (zone) { zone.style.display = 'block'; zone.dataset.code = code; }
+  );
+
+  Quagga.onDetected(function (result) {
+    const code = result && result.codeResult && result.codeResult.code;
+    if (!code) return;
+    onCodeScanne(code);
+  });
 }
-function associerCodeBarreScanne() {
-    const zone = document.getElementById('scannerAssignZone');
-    const code = zone ? zone.dataset.code : null;
-    const sel = document.getElementById('scannerAssignSelect');
-    if (!code || !sel || !sel.value) return;
-    const boissonId = parseInt(sel.value);
-    if (data.boissons.some(b => b.codeBarre === code)) {
-        alert('❌ Ce code est déjà associé à un autre produit.'); return;
-    }
-    const b = data.boissons.find(x => x.id === boissonId);
-    if (b) {
-        b.codeBarre = code;
-        afficherBoissons(); debounceSauvegarde();
-        if (scannerMode === 'achat') {
-            const selAchat = document.getElementById('achatBoisson');
-            if (selAchat) selAchat.value = boissonId;
-        }
+
+function arreterScanner() {
+  if (quaggaInstance) {
+    Quagga.stop();
+    quaggaInstance = null;
+  } else {
+    // Au cas où on a appelé start() sans garder la référence
+    Quagga.stop();
+  }
+}
+
+function fermerScanner() {
+  arreterScanner();
+  const modal = document.getElementById('scannerModal');
+  if (modal) modal.style.display = 'none';
+  const assignZone = document.getElementById('scannerAssignZone');
+  if (assignZone) assignZone.style.display = 'none';
+  scannerMode = null;
+}
+
+function onCodeScanne(code) {
+  // Anti-rebond : ignorer les scans répétés du même code en moins de 2s
+  const now = Date.now();
+  if (code === dernierCodeScanne && now - dernierScanTimestamp < 2000) {
+    return;
+  }
+  dernierCodeScanne = code;
+  dernierScanTimestamp = now;
+
+  const produit = data.boissons.find((b) => b.codeBarre === code);
+  if (produit) {
+    if (scannerMode === 'achat') {
+      const sel = document.getElementById('achatBoisson');
+      if (sel) {
+        sel.value = produit.id;
+      }
+    } else if (scannerMode === 'boisson') {
+      const inp = document.getElementById('boissonCodeBarre');
+      if (inp) {
+        inp.value = code;
+      }
     }
     fermerScanner();
+    return;
+  }
+
+  // Code inconnu
+  if (scannerMode === 'boisson') {
+    // En mode ajout produit, on renseigne directement le champ
+    const inp = document.getElementById('boissonCodeBarre');
+    if (inp) {
+      inp.value = code;
+    }
+    fermerScanner();
+    return;
+  }
+
+  // En mode achat : proposer d’associer ce code à un produit existant
+  arreterScanner();
+  const status = document.getElementById('scannerStatus');
+  if (status) {
+    status.style.color = '#856404';
+    status.textContent = 'Code inconnu : associez-le à un produit.';
+  }
+
+  const zone = document.getElementById('scannerAssignZone');
+  const codeSpan = document.getElementById('scannerCodeInconnu');
+  const sel = document.getElementById('scannerAssignSelect');
+  if (codeSpan) codeSpan.textContent = code;
+  if (sel) {
+    sel.innerHTML = '';
+    data.boissons.forEach((b) => {
+      const o = document.createElement('option');
+      o.value = b.id;
+      o.textContent = b.nom;
+      sel.appendChild(o);
+    });
+  }
+  if (zone) {
+    zone.style.display = 'block';
+    zone.dataset.code = code;
+  }
+}
+
+function associerCodeBarreScanne() {
+  const zone = document.getElementById('scannerAssignZone');
+  const code = zone ? zone.dataset.code : null;
+  const sel = document.getElementById('scannerAssignSelect');
+  if (!code || !sel || !sel.value) return;
+
+  const boissonId = parseInt(sel.value, 10);
+  if (data.boissons.some((b) => b.codeBarre === code && b.id !== boissonId)) {
+    alert('Ce code est déjà associé à un autre produit.');
+    return;
+  }
+
+  const b = data.boissons.find((x) => x.id === boissonId);
+  if (b) {
+    b.codeBarre = code;
+    afficherBoissons();
+    debounceSauvegarde();
+    if (scannerMode === 'achat') {
+      const selAchat = document.getElementById('achatBoisson');
+      if (selAchat) selAchat.value = boissonId;
+    }
+    fermerScanner();
+  }
 }
 
 // ===== INVENTAIRE DE FIN DE SAISON =====
