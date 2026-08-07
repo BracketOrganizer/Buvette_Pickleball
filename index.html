@@ -164,8 +164,6 @@
         <div class="login-brand">🍺 Bar Pickleball</div>
         <div class="login-sub">Gestion de la buvette RSTH</div>
         <div id="loginMsg"></div>
-        <div id="debugLogBox" style="font-size:10px;color:#999;text-align:left;max-height:110px;overflow-y:auto;background:#f8f8f8;border-radius:6px;padding:6px;margin-bottom:8px;font-family:monospace;"></div>
-        <div style="text-align:right;margin:-6px 0 8px;"><a href="#" onclick="effacerDebugLog();return false;" style="font-size:10px;color:#aaa;">effacer le journal</a></div>
         <div class="login-form">
             <div>
                 <label>Email</label>
@@ -1441,7 +1439,7 @@ async function updateUIForUser(user) {
     if (user) {
         // ── Utilisateur Firebase connecté ──────────────────────────────
         currentUser = user; isVisitor = false;
-        const adminEmails = ["yves.cerisier@orange.fr","bracket.organizer@gmail.com","quinquin44@gmail.com","checheux@gmail.com"];
+        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","checheux@gmail.com"];
         isAdmin = adminEmails.map(normaliserEmail).includes(normaliserEmail(user.email));
 
         if (isAdmin) {
