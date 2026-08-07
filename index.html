@@ -480,7 +480,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCD4BhwleehQNV1LtJqpiDmfEaI0O907Wc",
@@ -1280,10 +1280,11 @@ function showAuthMsg(msg, color) {
     if(el){ el.textContent = msg; el.style.color = color === 'red' ? '#c0281a' : '#1e8c45'; }
 }
 async function loginWithGoogle() {
-    try { await signInWithPopup(auth, provider); masquerLogin(); }
+    const m = document.getElementById('loginMsg');
+    if(m){ m.style.color='#888'; m.textContent='Redirection vers Google...'; }
+    try { await signInWithRedirect(auth, provider); }
     catch(e) {
-        const m = document.getElementById('loginMsg');
-        if(m) m.textContent = e.code==='auth/unauthorized-domain' ? '⚠️ Domaine non autorisé' : e.code==='auth/popup-closed-by-user' ? '⚠️ Connexion annulée' : '❌ '+e.message;
+        if(m) m.textContent = e.code==='auth/unauthorized-domain' ? '⚠️ Domaine non autorisé' : '❌ '+e.message;
     }
 }
 async function loginWithEmail() {
@@ -1510,6 +1511,13 @@ function initialiser() {
 // Brancher Firebase Auth à la racine du module (pas dans initialiser)
 onAuthStateChanged(auth, async (user) => {
     await updateUIForUser(user);
+});
+
+// Capture le résultat d'une éventuelle redirection Google (login via signInWithRedirect)
+getRedirectResult(auth).catch((e) => {
+    console.error('Erreur retour redirection Google:', e);
+    const m = document.getElementById('loginMsg');
+    if (m) m.textContent = '❌ Connexion Google échouée : ' + (e.code || e.message);
 });
 
 // Exposer tout en global
