@@ -489,6 +489,10 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
                 <input type="text" id="boissonCodeBarre" placeholder="Scannez ou saisissez le code" inputmode="numeric">
                 <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScanner('boisson')"><i class="fas fa-barcode"></i></button>
             </div>
+            <div id="boissonPhotoPreview" style="display:none;align-items:center;gap:8px;margin-top:8px;">
+                <img id="boissonPhotoImg" src="" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #ddd;">
+                <span style="font-size:12px;color:#888;">Photo récupérée automatiquement</span>
+            </div>
         </div>
         <button class="no-print" onclick="ajouterBoisson()"><i class="fas fa-plus"></i> Ajouter le produit</button>
         <h3>Liste des produits</h3>
@@ -664,7 +668,14 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
         <p id="scannerStatus" style="font-size:13px;color:#888;min-height:18px;margin-top:8px;"></p>
         <div id="scannerAssignZone" style="display:none;text-align:left;margin-top:10px;">
             <p style="font-size:13px;color:#856404;margin-bottom:8px;">Code inconnu : <strong id="scannerCodeInconnu"></strong></p>
-            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Associer ce code à un produit existant</label>
+            <div id="scannerNouveauProduitZone" style="display:none;background:#eaf6ff;border:1px solid #bfe3fa;border-radius:8px;padding:10px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <img id="scannerNouveauProduitImg" src="" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;display:none;">
+                    <span style="font-size:13px;">Trouvé en ligne : <strong id="scannerNouveauProduitNom"></strong></span>
+                </div>
+                <button class="btn-success" style="width:100%;" onclick="creerNouveauProduitDepuisScan()"><i class="fas fa-plus"></i> Créer ce produit</button>
+            </div>
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">Ou associer ce code à un produit existant</label>
             <select id="scannerAssignSelect" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;"></select>
             <button class="btn-success" style="margin-top:8px;" onclick="associerCodeBarreScanne()"><i class="fas fa-link"></i> Associer et sélectionner</button>
         </div>
@@ -719,7 +730,7 @@ let data = { apports: [], boissons: [], achats: [], ventes: [], remboursements: 
 let visitorCode = null;
 let saveTimeout, isSaving = false;
 let triApports = 'desc', triAchats = 'desc', triVentes = 'desc', triRemboursements = 'desc', triOfferts = 'desc';
-let scannerContext = null, scannerDernierCode = null, scanner = null, scanProcessing = false;
+let scannerContext = null, scannerDernierCode = null, scanner = null, scanProcessing = false, scanPhotoUrlTemp = null;
 
 // ===== SAUVEGARDE =====
 function mettreAJourStatutSauvegarde(statut) {
@@ -1060,10 +1071,24 @@ function ajouterBoisson() {
     if (codeBarre && data.boissons.some(b => b.codeBarre === codeBarre)) {
         alert('❌ Ce code-barre est déjà associé à un autre produit'); return;
     }
-    data.boissons.push({ id: Date.now(), nom, type, prix, unite, codeBarre, stockInitial: 0, dateAjout: new Date().toISOString() });
+    data.boissons.push({ id: Date.now(), nom, type, prix, unite, codeBarre, photoUrl: scanPhotoUrlTemp || null, stockInitial: 0, dateAjout: new Date().toISOString() });
     document.getElementById('boissonNom').value = ''; document.getElementById('boissonPrix').value = '';
     if (codeBarreInput) codeBarreInput.value = '';
+    masquerPhotoPreview();
     afficherBoissons(); mettreAJourSelects(); debounceSauvegarde();
+}
+function emojiProduit(type) {
+    if (type === 'boisson') return '🥤';
+    if (type === 'nourriture') return '🍔';
+    return '📦';
+}
+function miniatureProduitHtml(b, size) {
+    size = size || 34;
+    const emoji = emojiProduit(b.type);
+    if (b.photoUrl) {
+        return `<img src="${b.photoUrl}" alt="" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:6px;border:1px solid #ddd;flex-shrink:0;" onerror="this.outerHTML='<span style=\\'display:inline-flex;width:${size}px;height:${size}px;align-items:center;justify-content:center;font-size:${Math.round(size*0.6)}px;background:#f4f1e8;border-radius:6px;flex-shrink:0;\\'>${emoji}</span>';">`;
+    }
+    return `<span style="display:inline-flex;width:${size}px;height:${size}px;align-items:center;justify-content:center;font-size:${Math.round(size*0.6)}px;background:#f4f1e8;border-radius:6px;flex-shrink:0;">${emoji}</span>`;
 }
 function afficherBoissons() {
     const tbody = document.getElementById('tbodyBoissons'); tbody.innerHTML = '';
@@ -1071,7 +1096,10 @@ function afficherBoissons() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
-                <span id="boisson-nom-${b.id}">${b.nom}</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    ${miniatureProduitHtml(b, 32)}
+                    <span id="boisson-nom-${b.id}">${b.nom}</span>
+                </div>
                 <input type="text" id="edit-boisson-nom-${b.id}" class="edit-input" value="${b.nom}" style="display:none">
             </td>
             <td>
@@ -1140,7 +1168,7 @@ function supprimerBoisson(id) {
 // ===== STOCK =====
 function calculerStock() {
     const stock = {};
-    data.boissons.forEach(b => { stock[b.id] = { nom:b.nom, type:b.type, unite:b.unite, prix:b.prix, stockInitial:(b.stockInitial||0), achatTotal:0, venteTotal:0, offertTotal:0, stockRestant:0 }; });
+    data.boissons.forEach(b => { stock[b.id] = { nom:b.nom, type:b.type, unite:b.unite, prix:b.prix, photoUrl:b.photoUrl||null, stockInitial:(b.stockInitial||0), achatTotal:0, venteTotal:0, offertTotal:0, stockRestant:0 }; });
     data.achats.forEach(a => { if(stock[a.boissonId]) stock[a.boissonId].achatTotal += a.quantite; });
     data.ventes.forEach(v => { if(stock[v.boissonId]) stock[v.boissonId].venteTotal += v.quantite; });
     data.offerts.forEach(o => { if(stock[o.boissonId]) stock[o.boissonId].offertTotal += o.quantite; });
@@ -1158,7 +1186,10 @@ function afficherStock() {
         const card = document.createElement('div');
         card.className = 'stock-card' + (item.stockRestant <= 0 ? ' stock-out' : item.stockRestant <= 10 ? ' stock-low' : '');
         card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-            <div><h4 style="margin:0 0 5px 0;">${item.nom}</h4><p style="margin:0;color:#666;">Prix: ${item.prix.toFixed(2)} € / ${item.unite}</p></div>
+            <div style="display:flex;align-items:center;gap:10px;">
+                ${miniatureProduitHtml(item, 40)}
+                <div><h4 style="margin:0 0 5px 0;">${item.nom}</h4><p style="margin:0;color:#666;">Prix: ${item.prix.toFixed(2)} € / ${item.unite}</p></div>
+            </div>
             <div style="text-align:right;display:flex;align-items:center;gap:10px;">
                 <div>
                     <p style="margin:0;font-size:18px;font-weight:bold;color:${item.stockRestant<=0?'#e74c3c':item.stockRestant<=10?'#f39c12':'#27ae60'}">${item.stockRestant} ${item.unite}</p>
@@ -1271,7 +1302,23 @@ function validerCodeManuel() {
     onCodeScanne(code);
     if (input) input.value = '';
 }
-function onCodeScanne(code) {
+async function rechercherProduitParCode(code) {
+    try {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
+        const json = await res.json();
+        if (json.status !== 1 || !json.product) return null;
+        const p = json.product;
+        const nom = p.product_name_fr || p.product_name || '';
+        if (!nom) return null;
+        return { nom, photoUrl: p.image_front_small_url || p.image_url || '' };
+    } catch(e) { return null; }
+}
+function masquerPhotoPreview() {
+    scanPhotoUrlTemp = null;
+    const prev = document.getElementById('boissonPhotoPreview');
+    if (prev) prev.style.display = 'none';
+}
+async function onCodeScanne(code) {
     if (scanProcessing) return;
     if (scannerDernierCode === code) return; // évite les lectures en rafale du même code
     scannerDernierCode = code;
@@ -1283,9 +1330,22 @@ function onCodeScanne(code) {
     if (scannerContext === 'boisson') {
         const champ = document.getElementById('boissonCodeBarre');
         if (champ) champ.value = code;
-        if (statusEl) statusEl.textContent = '✅ Code capturé : ' + code;
+        if (statusEl) statusEl.textContent = '🔎 Recherche des informations produit…';
+        const info = await rechercherProduitParCode(code);
         scanProcessing = false;
-        setTimeout(fermerScanner, 700);
+        if (info) {
+            const nomChamp = document.getElementById('boissonNom');
+            if (nomChamp) nomChamp.value = info.nom;
+            if (info.photoUrl) {
+                scanPhotoUrlTemp = info.photoUrl;
+                document.getElementById('boissonPhotoImg').src = info.photoUrl;
+                document.getElementById('boissonPhotoPreview').style.display = 'flex';
+            }
+            if (statusEl) statusEl.textContent = '✅ Produit trouvé : ' + info.nom;
+        } else {
+            if (statusEl) statusEl.textContent = '✅ Code capturé (produit non reconnu, complète le nom manuellement)';
+        }
+        setTimeout(fermerScanner, 900);
         return;
     }
     if (scannerContext === 'achat') {
@@ -1300,17 +1360,49 @@ function onCodeScanne(code) {
                 if (qte) qte.focus();
             }, 600);
         } else {
-            if (statusEl) statusEl.textContent = '';
+            if (statusEl) statusEl.textContent = '🔎 Recherche des informations produit…';
+            const info = await rechercherProduitParCode(code);
+            scanProcessing = false;
             const zone = document.getElementById('scannerAssignZone');
             document.getElementById('scannerCodeInconnu').textContent = code;
             const sel = document.getElementById('scannerAssignSelect'); sel.innerHTML = '';
             data.boissons.forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.nom; sel.appendChild(o); });
+            const suggestion = document.getElementById('scannerNouveauProduitZone');
+            if (info) {
+                document.getElementById('scannerNouveauProduitNom').textContent = info.nom;
+                const img = document.getElementById('scannerNouveauProduitImg');
+                if (info.photoUrl) { img.src = info.photoUrl; img.style.display = 'inline-block'; } else { img.style.display = 'none'; }
+                suggestion.style.display = 'block';
+                suggestion.dataset.nom = info.nom;
+                suggestion.dataset.photo = info.photoUrl || '';
+            } else if (suggestion) {
+                suggestion.style.display = 'none';
+            }
+            if (statusEl) statusEl.textContent = '';
             if (zone) { zone.style.display = 'block'; zone.dataset.code = code; }
-            scanProcessing = false;
         }
     } else {
         scanProcessing = false;
     }
+}
+function creerNouveauProduitDepuisScan() {
+    const zone = document.getElementById('scannerAssignZone');
+    const suggestion = document.getElementById('scannerNouveauProduitZone');
+    const code = zone ? zone.dataset.code : null;
+    const nom = suggestion ? suggestion.dataset.nom : '';
+    const photo = suggestion ? suggestion.dataset.photo : '';
+    fermerScanner();
+    changerSection('boissons');
+    document.getElementById('boissonNom').value = nom || '';
+    document.getElementById('boissonCodeBarre').value = code || '';
+    if (photo) {
+        scanPhotoUrlTemp = photo;
+        document.getElementById('boissonPhotoImg').src = photo;
+        document.getElementById('boissonPhotoPreview').style.display = 'flex';
+    } else {
+        masquerPhotoPreview();
+    }
+    setTimeout(() => { const p = document.getElementById('boissonPrix'); if (p) p.focus(); }, 200);
 }
 function associerCodeBarreScanne() {
     const zone = document.getElementById('scannerAssignZone');
@@ -2088,9 +2180,19 @@ Object.assign(window, {
     ajouterOffert, supprimerOffert, activerEditionOffert, annulerEditionOffert, sauvegarderModificationOffert,
     trierVentes, trierAchats, trierApports, trierRemboursements, trierOfferts,
     chargerArchives, voirArchive, fermerArchiveDetailModal, exporterArchive, exporterArchiveOuverte, supprimerArchive,
-    ouvrirScanner, fermerScanner, associerCodeBarreScanne, validerCodeManuel, toggleScannerCamera, toggleScannerTorch,
+    ouvrirScanner, fermerScanner, associerCodeBarreScanne, validerCodeManuel, toggleScannerCamera, toggleScannerTorch, creerNouveauProduitDepuisScan,
     ouvrirInventaireModal, fermerInventaireModal, validerInventaireEtNouvelleSaison
 });
+
+// Sélectionne automatiquement le contenu des champs texte/nombre au focus,
+// pour pouvoir retaper directement une valeur sans devoir l'effacer à la main
+// (fonctionne au clavier comme au tactile, y compris sur les lignes ajoutées dynamiquement).
+document.addEventListener('focus', function(e) {
+    const el = e.target;
+    if (el && el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number') && !el.readOnly && !el.disabled) {
+        setTimeout(() => { try { el.select(); } catch(err) {} }, 0);
+    }
+}, true);
 
 document.addEventListener('DOMContentLoaded', initialiser);
 </script>
