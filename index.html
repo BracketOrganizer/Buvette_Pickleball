@@ -496,7 +496,7 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
             <button type="button" class="btn-scan no-print" style="width:100%;font-size:14px;margin-top:8px;" onclick="declencherPhotoNouveauProduit()"><i class="fas fa-camera"></i> Prendre une photo du produit</button>
             <input type="file" id="inputPhotoNouveauProduit" accept="image/*" capture="environment" style="display:none" onchange="onPhotoNouveauProduitSelectionnee(event)">
             <div id="boissonPhotoPreview" style="display:none;align-items:center;gap:8px;margin-top:8px;">
-                <img id="boissonPhotoImg" src="" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #ddd;">
+                <img id="boissonPhotoImg" src="" alt="" style="width:84px;height:84px;object-fit:contain;background:#f4f1e8;border-radius:8px;border:1px solid #ddd;flex-shrink:0;">
                 <span style="font-size:12px;color:#888;flex:1;">Photo du produit</span>
                 <button type="button" onclick="masquerPhotoPreview()" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:16px;" title="Retirer la photo"><i class="fas fa-times"></i></button>
             </div>
@@ -678,7 +678,7 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
             <p style="font-size:13px;color:#856404;margin-bottom:8px;">Code inconnu : <strong id="scannerCodeInconnu"></strong></p>
             <div id="scannerNouveauProduitZone" style="display:none;background:#eaf6ff;border:1px solid #bfe3fa;border-radius:8px;padding:10px;margin-bottom:10px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                    <img id="scannerNouveauProduitImg" src="" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;display:none;">
+                    <img id="scannerNouveauProduitImg" src="" alt="" style="width:60px;height:60px;object-fit:contain;background:#f4f1e8;border-radius:6px;display:none;flex-shrink:0;">
                     <span style="font-size:13px;">Trouvé en ligne : <strong id="scannerNouveauProduitNom"></strong></span>
                 </div>
                 <button class="btn-success" style="width:100%;" onclick="creerNouveauProduitDepuisScan()"><i class="fas fa-plus"></i> Créer ce produit</button>
@@ -1094,7 +1094,7 @@ function miniatureProduitHtml(b, size) {
     size = size || 34;
     const emoji = emojiProduit(b.type);
     if (b.photoUrl) {
-        return `<img src="${b.photoUrl}" alt="" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:6px;border:1px solid #ddd;flex-shrink:0;" onerror="this.outerHTML='<span style=\\'display:inline-flex;width:${size}px;height:${size}px;align-items:center;justify-content:center;font-size:${Math.round(size*0.6)}px;background:#f4f1e8;border-radius:6px;flex-shrink:0;\\'>${emoji}</span>';">`;
+        return `<img src="${b.photoUrl}" alt="" style="width:${size}px;height:${size}px;object-fit:contain;background:#f4f1e8;border-radius:6px;border:1px solid #ddd;flex-shrink:0;" onerror="this.outerHTML='<span style=\\'display:inline-flex;width:${size}px;height:${size}px;align-items:center;justify-content:center;font-size:${Math.round(size*0.6)}px;background:#f4f1e8;border-radius:6px;flex-shrink:0;\\'>${emoji}</span>';">`;
     }
     return `<span style="display:inline-flex;width:${size}px;height:${size}px;align-items:center;justify-content:center;font-size:${Math.round(size*0.6)}px;background:#f4f1e8;border-radius:6px;flex-shrink:0;">${emoji}</span>`;
 }
@@ -1163,7 +1163,7 @@ function afficherBoissons() {
         tr.innerHTML = `
             <td>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    ${miniatureProduitHtml(b, 32)}
+                    ${miniatureProduitHtml(b, 42)}
                     <span id="boisson-nom-${b.id}">${b.nom}</span>
                     <button type="button" class="no-print" title="Prendre/changer la photo" onclick="declencherChangementPhoto(${b.id})" style="border:none;background:none;color:#888;cursor:pointer;font-size:14px;padding:2px;flex-shrink:0;"><i class="fas fa-camera"></i></button>
                 </div>
@@ -1254,7 +1254,7 @@ function afficherStock() {
         card.className = 'stock-card' + (item.stockRestant <= 0 ? ' stock-out' : item.stockRestant <= 10 ? ' stock-low' : '');
         card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
             <div style="display:flex;align-items:center;gap:10px;">
-                ${miniatureProduitHtml(item, 40)}
+                ${miniatureProduitHtml(item, 50)}
                 <div><h4 style="margin:0 0 5px 0;">${item.nom}</h4><p style="margin:0;color:#666;">Prix: ${item.prix.toFixed(2)} € / ${item.unite}</p></div>
             </div>
             <div style="text-align:right;display:flex;align-items:center;gap:10px;">
@@ -1538,7 +1538,7 @@ function afficherVentes() {
                 <span id="vente-date-${v.id}">${new Date(v.date).toLocaleDateString('fr-FR')}</span>
                 <input type="date" id="edit-vente-date-${v.id}" class="edit-date" value="${v.date}" style="display:none">
             </td>
-            <td><div style="display:flex;align-items:center;gap:8px;">${miniatureParId(v.boissonId,28)}<span>${v.boissonNom}</span></div></td>
+            <td><div style="display:flex;align-items:center;gap:8px;">${miniatureParId(v.boissonId,36)}<span>${v.boissonNom}</span></div></td>
             <td>
                 <span id="vente-quantite-${v.id}">${v.quantite}</span>
                 <input type="number" id="edit-vente-quantite-${v.id}" class="edit-input" value="${v.quantite}" min="1" style="display:none">
@@ -1608,7 +1608,7 @@ function afficherAchats() {
                 <span id="achat-date-${a.id}">${new Date(a.date).toLocaleDateString('fr-FR')}</span>
                 <input type="date" id="edit-achat-date-${a.id}" class="edit-date" value="${a.date}" style="display:none">
             </td>
-            <td><div style="display:flex;align-items:center;gap:8px;">${miniatureParId(a.boissonId,28)}<span>${a.boissonNom}</span></div></td>
+            <td><div style="display:flex;align-items:center;gap:8px;">${miniatureParId(a.boissonId,36)}<span>${a.boissonNom}</span></div></td>
             <td>
                 <span id="achat-quantite-${a.id}">${a.quantite}</span>
                 <input type="number" id="edit-achat-quantite-${a.id}" class="edit-input" value="${a.quantite}" min="1" style="display:none">
@@ -1790,7 +1790,7 @@ function afficherOfferts() {
                 <span id="offert-date-${o.id}">${new Date(o.date).toLocaleDateString('fr-FR')}</span>
                 <input type="date" id="edit-offert-date-${o.id}" class="edit-date" value="${o.date}" style="display:none">
             </td>
-            <td><div style="display:flex;align-items:center;gap:8px;">${miniatureParId(o.boissonId,28)}<span>${o.boissonNom}</span></div></td>
+            <td><div style="display:flex;align-items:center;gap:8px;">${miniatureParId(o.boissonId,36)}<span>${o.boissonNom}</span></div></td>
             <td>
                 <span id="offert-quantite-${o.id}">${o.quantite}</span>
                 <input type="number" id="edit-offert-quantite-${o.id}" class="edit-input" value="${o.quantite}" min="1" style="display:none">
