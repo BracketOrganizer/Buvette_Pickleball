@@ -8,202 +8,461 @@
   }
 </script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#08493c">
     <title>Bar du Pickleball de Mauves</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7f3ee; min-height: 100vh; padding: 10px; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 15px; }
-        h1 { color: #667eea; text-align: center; margin-bottom: 15px; }
-        h2 { margin-bottom: 15px; }
-        .top-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
-        .save-status { background: #27ae60; color: white; padding: 8px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; transition: all 0.3s ease; }
-        .save-status.saving { background: #f39c12; }
-        .save-status.error { background: #e74c3c; }
-        .tabs { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; }
-        .tab { padding: 12px 16px; background: #667eea; border: none; border-radius: 8px; cursor: pointer; color: white; white-space: nowrap; flex-shrink: 0; font-size: 14px; }
-        .tab.active { background: #2ecc71; }
-        .section { display: none; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; margin-bottom: 5px; font-weight: 600; }
-        input, select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; }
-        button { background: #667eea; color: white; padding: 14px; border: none; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 8px; font-size: 16px; font-weight: 600; }
-        .btn-small { padding: 10px 14px; width: auto; }
-        .btn-success { background: #27ae60; }
-        .btn-danger { background: #e74c3c; }
-        .btn-print { background: #3498db; }
-        .btn-warning { background: #f39c12; }
-        .btn-info { background: #17a2b8; }
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #667eea; color: white; cursor: pointer; user-select: none; }
-        .sort-indicator { margin-left: 5px; font-size: 12px; }
-        .action-icons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
-        .icon-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 8px; border-radius: 6px; }
-        .edit-btn { color: #f39c12; }
-        .delete-btn { color: #e74c3c; }
-        .cancel-btn { color: #95a5a6; }
-        /* Bouton valider mobile — vert, visible, tactile */
-        .validate-btn {
-            background: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            display: none;
-            width: auto;
-            margin: 0;
-            min-width: 48px;
-            min-height: 44px;
-            touch-action: manipulation;
-        }
-        .mobile-table { overflow-x: auto; }
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 15px 0; }
-        .summary-card { background: #667eea; color: white; padding: 15px; border-radius: 8px; text-align: center; }
-        .edit-input { width: 100%; padding: 8px; border: 2px solid #f39c12; border-radius: 4px; font-size: 16px; }
-        .edit-date { width: 100%; padding: 6px; border: 2px solid #f39c12; border-radius: 4px; font-size: 16px; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-        #visitorModal { z-index: 10000 !important; }
-        .modal-content { background: white; padding: 20px; border-radius: 10px; max-width: 400px; width: 90%; text-align: center; }
-        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
-        .stock-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; }
-        .stock-low { background: #fff3cd; border-color: #ffeaa7; }
-        .stock-out { background: #f8d7da; border-color: #f5c6cb; }
-        @media print { .no-print { display: none !important; } body { background: white !important; } .container { box-shadow: none !important; } }
-        :root { --bar-ink2:#3d3020; --bar-ylw:#d4890a; --bar-grn:#1e8c45; --bar-grn2:#145e2e; --bar-bdr:#d4c9b5; --bar-s0:#fff; --bar-s1:#f0ebe2; --bar-muted:#7a6a50; }
-        /* LOGIN SCREEN */
-        #loginScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:#3d3020; position:fixed; inset:0; z-index:9999; }
-        .login-box { background:#fff; border-radius:16px; padding:32px; width:100%; max-width:400px; box-shadow:0 8px 40px rgba(0,0,0,.4); }
-        .login-brand { font-family:'Oswald',sans-serif; font-size:26px; letter-spacing:2px; color:#d4890a; text-align:center; margin-bottom:4px; }
-        .login-sub { text-align:center; font-size:13px; color:#7a6a50; margin-bottom:24px; }
-        .login-form { display:flex; flex-direction:column; gap:12px; }
-        .login-form label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#7a6a50; margin-bottom:4px; }
-        .login-form input { width:100%; padding:10px 13px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; color:#1a1410; outline:none; box-sizing:border-box; }
-        .login-form input:focus { border-color:#1e8c45; }
-        .btn-login-main { width:100%; padding:12px; border:none; border-radius:8px; background:#1e8c45; color:#fff; font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:.8px; cursor:pointer; text-transform:uppercase; transition:background .15s; }
-        .btn-login-main:hover { background:#145e2e; }
-        .btn-google-bar { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:10px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; color:#1a1410; cursor:pointer; transition:background .15s; }
-        .btn-google-bar:hover { background:#e8e1d5; }
-        .login-divider { text-align:center; font-size:12px; color:#b0a090; position:relative; margin:2px 0; }
-        .login-divider::before, .login-divider::after { content:''; position:absolute; top:50%; width:42%; height:1px; background:#d4c9b5; }
-        .login-divider::before { left:0; } .login-divider::after { right:0; }
-        .btn-visitor-login { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px; border-radius:8px; border:1.5px solid #4a7090; background:linear-gradient(135deg,#1a2a40,#2a3d56); color:#7adcff; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; transition:all .2s; }
-        .btn-visitor-login:hover { border-color:#7adcff; }
-        #loginMsg { text-align:center; font-size:13px; min-height:18px; margin-bottom:10px; color:#e74c3c; }
-        /* NAV BAR */
-        .nav-bar { background:#3d3020; color:#fff; padding:0 16px; height:54px; display:none; align-items:center; gap:12px; position:sticky; top:0; z-index:200; box-shadow:0 3px 16px rgba(0,0,0,.3); }
-        .nav-brand { font-family:'Oswald',sans-serif; font-size:20px; letter-spacing:2px; color:#ffd080; flex-shrink:0; }
-        .nav-select-wrap { flex:1; max-width:260px; }
-        .nav-select { width:100%; padding:7px 30px 7px 12px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:#fff; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; cursor:pointer; outline:none; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
-        .nav-select option { background:#3d3020; color:#fff; }
-        .nav-user { font-size:12px; color:rgba(255,255,255,.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
-        .nav-r { margin-left:auto; display:flex; gap:8px; align-items:center; }
-        .nav-btn { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:#fff; padding:5px 12px; border-radius:6px; cursor:pointer; font-family:'Exo 2',sans-serif; font-size:12px; font-weight:600; transition:background .15s; white-space:nowrap; }
-        .nav-btn:hover { background:rgba(255,255,255,.22); }
-        /* Vendeur : cacher les options non-ventes dans le select */
-        .saisie-mode .nav-select option:not([value="ventes"]) { display:none !important; }
-        /* readonly : on bloque uniquement les boutons d'action de l'appli, pas la navigation ni la connexion */
-        .readonly-mode .section button { opacity:0.5; pointer-events:none; }
-        .readonly-mode .section input,
-        .readonly-mode .section select { opacity:0.5; pointer-events:none; }
-        /* Exceptions : les onglets restent cliquables en lecture seule */
-        .readonly-mode .tabs button { opacity:1 !important; pointer-events:auto !important; }
-        /* La top-bar, les modals et le loginPanel restent toujours actifs */
-        .top-bar button, .top-bar input { pointer-events:auto !important; opacity:1 !important; }
-        #loginPanel, #loginPanel * { pointer-events:auto !important; opacity:1 !important; }
-        .modal, .modal * { pointer-events:auto !important; opacity:1 !important; }
-        /* Vendeur : seul l'onglet Ventes est accessible */
-        .saisie-mode .nav-select option:not([value="ventes"]) { display:none !important; }
-        /* Budget */
+/* ============================================================
+   Bar du Pickleball — thème "terrain"
+   Vert terrain + balle jaune optique + ambre bière
+   ============================================================ */
+:root {
+    --court: #0c6b58;
+    --court-deep: #08493c;
+    --court-ink: #0a2f27;
+    --ball: #d8ef3c;
+    --ball-deep: #a9c20f;
+    --amber: #f2a61f;
+    --paper: #eff3ec;
+    --card: #ffffff;
+    --line: #dce4d8;
+    --ink: #14261f;
+    --muted: #5d6e65;
+    --danger: #d9483b;
+    --ok: #1e8c45;
+    --info: #2b7fa8;
+    --display: 'Bricolage Grotesque', system-ui, sans-serif;
+    --body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
 
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+    font-family: var(--body);
+    color: var(--ink);
+    background: var(--paper);
+    min-height: 100vh;
+    min-height: 100dvh;
+    line-height: 1.45;
+}
+h1, h2, h3, h4 { font-family: var(--display); letter-spacing: -.01em; color: var(--court-ink); }
+h2 { font-size: 26px; font-weight: 800; margin-bottom: 18px; line-height: 1.15; }
+h3 { font-size: 17px; font-weight: 700; }
 
-        /* LOGIN SCREEN */
-        #loginScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:#3d3020; position:fixed; inset:0; z-index:9999; }
-        .login-box { background:#fff; border-radius:16px; padding:32px; width:100%; max-width:400px; box-shadow:0 8px 40px rgba(0,0,0,.4); }
-        .login-brand { font-family:'Oswald',sans-serif; font-size:26px; letter-spacing:2px; color:#d4890a; text-align:center; margin-bottom:4px; }
-        .login-sub { text-align:center; font-size:13px; color:#7a6a50; margin-bottom:24px; }
-        .login-form { display:flex; flex-direction:column; gap:12px; }
-        .login-form label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#7a6a50; margin-bottom:4px; }
-        .login-form input { width:100%; padding:10px 13px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; color:#1a1410; outline:none; box-sizing:border-box; }
-        .login-form input:focus { border-color:#1e8c45; }
-        .btn-login-main { width:100%; padding:12px; border:none; border-radius:8px; background:#1e8c45; color:#fff; font-family:'Oswald',sans-serif; font-size:16px; letter-spacing:.8px; cursor:pointer; text-transform:uppercase; transition:background .15s; }
-        .btn-login-main:hover { background:#145e2e; }
-        .btn-google-bar { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:10px; background:#f0ebe2; border:1.5px solid #d4c9b5; border-radius:8px; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; color:#1a1410; cursor:pointer; transition:background .15s; }
-        .btn-google-bar:hover { background:#e8e1d5; }
-        .login-divider { text-align:center; font-size:12px; color:#b0a090; position:relative; margin:2px 0; }
-        .login-divider::before, .login-divider::after { content:''; position:absolute; top:50%; width:42%; height:1px; background:#d4c9b5; }
-        .login-divider::before { left:0; } .login-divider::after { right:0; }
-        .btn-visitor-login { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px; border-radius:8px; border:1.5px solid #4a7090; background:linear-gradient(135deg,#1a2a40,#2a3d56); color:#7adcff; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; transition:all .2s; }
-        .btn-visitor-login:hover { border-color:#7adcff; }
-        #loginMsg { text-align:center; font-size:13px; min-height:18px; margin-bottom:10px; }
-        /* NAV BAR */
-        .nav-bar { background:#3d3020; color:#fff; padding:0 16px; height:54px; align-items:center; gap:12px; position:sticky; top:0; z-index:200; box-shadow:0 3px 16px rgba(0,0,0,.3); }
-        .nav-brand { font-family:'Oswald',sans-serif; font-size:20px; letter-spacing:2px; color:#ffd080; flex-shrink:0; }
-        .nav-select-wrap { flex:1; max-width:260px; }
-        .nav-select { width:100%; padding:7px 30px 7px 12px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25); border-radius:8px; color:#fff; font-family:'Exo 2',sans-serif; font-size:14px; font-weight:600; cursor:pointer; outline:none; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='%23fff' d='M5 7L0 0h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
-        .nav-select option { background:#3d3020; color:#fff; }
-        .nav-user { font-size:12px; color:rgba(255,255,255,.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
-        .nav-r { margin-left:auto; display:flex; gap:8px; align-items:center; }
-        .nav-btn { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:#fff; padding:5px 12px; border-radius:6px; cursor:pointer; font-family:'Exo 2',sans-serif; font-size:12px; font-weight:600; transition:background .15s; white-space:nowrap; }
-        .nav-btn:hover { background:rgba(255,255,255,.22); }
-        /* container style */
-        .container { background:#f7f3ee !important; box-shadow:none !important; border-radius:0 !important; padding:0 !important; }
-        .section { display:none; background:#fff; border-radius:10px; margin:16px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+/* ---------- Conteneur & sections ---------- */
+.container { max-width: 1100px; margin: 0 auto; padding: 0 0 40px; }
+.section {
+    display: none;
+    background: var(--card);
+    border-radius: 22px;
+    margin: 18px 16px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(10,47,39,.06), 0 10px 30px -12px rgba(10,47,39,.18);
+    animation: sectionIn .22s ease-out;
+}
+@keyframes sectionIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.section > h3 { margin: 30px 0 4px; color: var(--muted); font-size: 15px; font-weight: 700; }
 
-        /* ===== RESPONSIVE MOBILE ===== */
-        @media (max-width: 640px) {
-            body { padding:0; }
-            .nav-bar { height:auto; flex-wrap:wrap; padding:8px 10px; gap:8px; }
-            .nav-brand { font-size:16px; flex-basis:auto; }
-            .nav-select-wrap { max-width:none; flex:1 1 auto; order:3; width:100%; }
-            .nav-user { display:none; }
-            .nav-r { margin-left:0; order:2; }
-            .nav-btn { padding:6px 10px; font-size:12px; }
-            .section { margin:8px; padding:12px; }
-            h1 { font-size:20px; margin-bottom:10px; }
-            h2 { font-size:17px; }
-            h3 { font-size:15px; }
-            .summary-grid { grid-template-columns: repeat(2, 1fr); gap:8px; }
-            .summary-card { padding:10px 8px; }
-            .summary-card h3 { font-size:11px; }
-            .summary-card p { font-size:16px; }
-            .stock-card { padding:10px; }
-            .stock-card > div { flex-wrap:wrap; }
-            table { font-size:13px; }
-            th, td { padding:8px 5px; }
-            .icon-btn { font-size:16px; padding:6px; }
-            .modal-content { padding:16px; width:94%; max-height:88vh; overflow-y:auto; }
-            .login-box { padding:22px 18px; }
-            .top-bar { gap:6px; }
-            .top-bar button, .top-bar .btn-small { font-size:12px; padding:9px 10px; }
-        }
-        @media (max-width: 400px) {
-            .summary-grid { grid-template-columns: 1fr 1fr; }
-            .nav-brand { font-size:14px; }
-        }
-        /* ===== SCANNER CODE-BARRE ===== */
-        .field-with-scan { display:flex; gap:8px; align-items:stretch; }
-        .field-with-scan select, .field-with-scan input { flex:1; min-width:0; }
-        .btn-scan { background:#17a2b8; color:#fff; border:none; border-radius:8px; width:auto; flex-shrink:0; padding:0 16px; font-size:18px; cursor:pointer; min-height:48px; touch-action:manipulation; }
-        .btn-scan:active { background:#128293; }
-        .btn-scan.btn-danger { background:#e74c3c; }
-        .btn-scan.btn-danger:active { background:#c0392b; }
-        #scannerAssignZone { background:#fff3cd; border:1px solid #ffeaa7; border-radius:8px; padding:12px; }
-        #scannerAssignZone select { margin-top:4px; }
-        .inv-row { display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid #e5e0d5; border-radius:8px; padding:10px 12px; }
-        .inv-row input { width:90px; padding:8px; border:2px solid #ddd; border-radius:6px; font-size:16px; text-align:center; }
-        @media (max-width: 640px) {
-            .btn-scan { padding:0 14px; min-width:48px; }
-            .inv-row { flex-wrap:wrap; }
-            .inv-row input { width:100%; }
-        }
-        </style>
+/* ---------- Formulaires ---------- */
+.form-group { margin-bottom: 14px; max-width: 560px; }
+label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: var(--court-ink); }
+input, select {
+    width: 100%;
+    padding: 13px 14px;
+    min-height: 48px;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    background: #f6f8f4;
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+}
+input:focus, select:focus { outline: none; border-color: var(--court); background: #fff; box-shadow: 0 0 0 4px rgba(12,107,88,.15); }
+select { appearance: none; -webkit-appearance: none; padding-right: 40px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1.5l6 6 6-6' fill='none' stroke='%230c6b58' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; }
+input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Sélecteur de quantité (+ / −) */
+.stepper { display: flex; align-items: stretch; gap: 8px; }
+.stepper input { text-align: center; font-family: var(--display); font-weight: 800; font-size: 22px; flex: 1; min-width: 0; }
+.stepper .step-btn { width: 52px; min-height: 48px; padding: 0; margin: 0; flex: none; border-radius: 12px;
+    background: #e6efe1; color: var(--court-deep); font-size: 26px; font-weight: 700; line-height: 1; box-shadow: none; }
+.stepper .step-btn:active { background: var(--ball); }
+
+/* ---------- Boutons ---------- */
+button {
+    font-family: var(--body);
+    background: var(--court);
+    color: #fff;
+    padding: 14px 18px;
+    min-height: 48px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    touch-action: manipulation;
+    transition: transform .08s, box-shadow .08s, background .15s, filter .15s;
+}
+button:hover { filter: brightness(1.06); }
+button:active { transform: translateY(1px); }
+button:focus-visible, a:focus-visible, .tabs-nav button:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+.btn-small { padding: 10px 16px; width: auto; min-height: 44px; }
+.btn-success { background: var(--ok); }
+.btn-danger { background: var(--danger); }
+.btn-print { background: var(--info); }
+.btn-warning { background: var(--amber); color: var(--court-ink); }
+.btn-info { background: var(--info); }
+
+/* Action principale de chaque page : balle jaune, effet "touche enfoncée" */
+.section > button:not(.btn-small) {
+    max-width: 560px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--ball);
+    color: var(--court-ink);
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 800;
+    min-height: 54px;
+    margin-top: 6px;
+    box-shadow: 0 4px 0 var(--ball-deep);
+}
+.section > button:not(.btn-small):hover { filter: none; background: #e2f550; }
+.section > button:not(.btn-small):active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ball-deep); }
+
+/* ---------- Tableaux (bureau) ---------- */
+.mobile-table { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; margin-top: 12px; background: #fff; }
+table { width: 100%; border-collapse: collapse; margin: 0; }
+th, td { padding: 13px 16px; text-align: left; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th { background: #eaf1e5; color: var(--court-ink); font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; user-select: none; }
+th.no-print { cursor: default; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr { transition: background .12s; }
+tbody tr:hover { background: #f5f9f1; }
+.sort-indicator { margin-left: 4px; font-size: 11px; color: var(--court); }
+
+.action-icons { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.icon-btn { background: none; color: inherit; border: none; font-size: 17px; cursor: pointer; padding: 0; margin: 0; width: 42px; height: 42px; min-height: 42px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+.icon-btn:hover { background: #eef3ea; filter: none; }
+.edit-btn { color: #c97d06; }
+.delete-btn { color: var(--danger); }
+.cancel-btn { color: var(--muted); }
+.validate-btn {
+    background: var(--ok); color: #fff; border: none; border-radius: 999px;
+    padding: 0 18px; font-size: 15px; font-weight: 800; cursor: pointer;
+    display: none; width: auto; margin: 0; min-width: 48px; min-height: 42px; touch-action: manipulation;
+}
+.edit-input, .edit-date { width: 100%; padding: 8px 10px; min-height: 42px; border: 2px solid var(--amber); border-radius: 10px; font-size: 16px; background: #fffaf0; }
+
+/* ---------- Cartes de synthèse ---------- */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 6px 0 22px; }
+.summary-card {
+    background: #fff; color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 16px; padding: 16px 16px 14px 20px; text-align: left;
+    position: relative; --accent: #cfd9ca;
+}
+.summary-card::before, .stock-card::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 5px; border-radius: 0 5px 5px 0; background: var(--accent); }
+.summary-card h3 { font-family: var(--body); font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 6px; letter-spacing: 0; }
+.summary-card p { font-family: var(--display); font-size: 27px; font-weight: 800; color: var(--court-ink); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.summary-card small { display: block; margin-top: 6px; font-size: 11.5px !important; line-height: 1.35; color: var(--muted); }
+
+/* Bilan : les deux chiffres qui comptent passent devant */
+#bilan .summary-card:nth-child(1) { --accent: var(--ok); }
+#bilan .summary-card:nth-child(2) { --accent: var(--danger); }
+#bilan .summary-card:nth-child(3) { --accent: var(--ok); }
+#bilan .summary-card:nth-child(4) { --accent: var(--amber); }
+#bilan .summary-card:nth-child(9),
+#bilan .summary-card:nth-child(8) { grid-column: span 2; padding: 20px; border: 0; }
+#bilan .summary-card:nth-child(9)::before, #bilan .summary-card:nth-child(8)::before { display: none; }
+#bilan .summary-card:nth-child(9) { order: -2; background: var(--court-deep); color: #fff; position: relative; overflow: hidden; }
+#bilan .summary-card:nth-child(9) h3, #bilan .summary-card:nth-child(9) small { color: rgba(255,255,255,.72); }
+#bilan .summary-card:nth-child(9) p { color: var(--ball); font-size: 40px; }
+#bilan .summary-card:nth-child(9)::after { content: ''; position: absolute; right: -28px; top: -28px; width: 120px; height: 120px; border-radius: 50%; border: 3px solid rgba(255,255,255,.14); }
+#bilan .summary-card:nth-child(8) { order: -1; background: var(--ball); }
+#bilan .summary-card:nth-child(8) h3, #bilan .summary-card:nth-child(8) small { color: rgba(10,47,39,.72); }
+#bilan .summary-card:nth-child(8) p { font-size: 40px; }
+
+/* Stock */
+#stock .summary-card:nth-child(2) { --accent: var(--ok); }
+#stock .summary-card:nth-child(3) { --accent: var(--danger); }
+#listeStock { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin-top: 12px; }
+.stock-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px 14px 22px; margin: 0; position: relative; --accent: var(--ok); }
+.stock-card > div { flex-wrap: wrap; gap: 10px 14px; }
+.stock-card > div > div:first-child { flex: 1 1 190px; min-width: 0; }
+.stock-card > div > div:last-child { margin-left: auto; }
+.stock-card h4 { font-family: var(--display); font-size: 18px; color: var(--court-ink); }
+.stock-card p { font-variant-numeric: tabular-nums; }
+.stock-low { background: #fff8e8; border-color: #f4dfa9; --accent: var(--amber); }
+.stock-out { background: #fdf0ee; border-color: #f2c9c3; --accent: var(--danger); }
+
+/* ---------- Panneaux (Utilisateurs) ---------- */
+.panel { background: #f4f7f1; border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 18px; }
+.panel h3 { margin-bottom: 10px; color: var(--court-ink); }
+.panel-visitor { background: #e8f2f7; border-color: #c4dde9; }
+.panel-hint { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+.code-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.code-chip { background: #fff; border: 2px solid #c4dde9; border-radius: 12px; padding: 8px 20px; font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: 6px; color: var(--info); font-variant-numeric: tabular-nums; }
+.msg-ok { margin-top: 8px; font-size: 13px; color: var(--ok); min-height: 16px; }
+.user-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: end; }
+.user-form .form-group { margin: 0; max-width: none; }
+.user-form button { margin: 0; white-space: nowrap; }
+#addUserMsg { margin-top: 8px; font-size: 13px; text-align: center; min-height: 16px; }
+#usersList { overflow-x: auto; }
+#usersList table { font-size: 14px; }
+#usersList button { width: auto; min-height: 38px; padding: 6px 12px; margin: 0; font-size: 13px; }
+
+/* ---------- Modales ---------- */
+.modal { display: none; position: fixed; inset: 0; background: rgba(8,40,32,.55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; padding: 16px; }
+#visitorModal { z-index: 10000 !important; }
+.modal-content { background: #fff; padding: 26px 22px 22px; border-radius: 22px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,.3); }
+.modal-content h3 { margin-bottom: 8px; font-size: 20px; }
+.modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
+.modal-buttons button { flex: 1 1 140px; margin: 0; }
+
+/* ---------- Barre du haut (statut sauvegarde, masquée par défaut) ---------- */
+.top-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
+.save-status { background: var(--ok); color: #fff; padding: 8px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; transition: all .3s ease; }
+.save-status.saving { background: var(--amber); color: var(--court-ink); }
+.save-status.error { background: var(--danger); }
+
+/* ============================================================
+   ÉCRAN DE CONNEXION — un terrain vu de dessus
+   ============================================================ */
+#loginScreen {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; padding: 28px 20px; overflow-y: auto;
+    background: var(--court);
+}
+#loginScreen::before, #loginScreen::after { content: ''; position: absolute; pointer-events: none; }
+#loginScreen::before { inset: 14px; border: 3px solid rgba(255,255,255,.32); border-radius: 6px; }
+#loginScreen::after {
+    inset: 14px;
+    --l: rgba(255,255,255,.32);
+    background:
+        linear-gradient(var(--l), var(--l)) 0 36% / 100% 3px no-repeat,
+        linear-gradient(var(--l), var(--l)) 0 64% / 100% 3px no-repeat,
+        linear-gradient(var(--l), var(--l)) 50% 0 / 3px 36% no-repeat,
+        linear-gradient(var(--l), var(--l)) 50% 100% / 3px 36% no-repeat,
+        repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 8px, transparent 8px 16px) 0 50% / 100% 2px no-repeat;
+    opacity: .7;
+}
+.login-box {
+    position: relative; z-index: 1;
+    background: #fff; border-radius: 26px;
+    margin: auto; width: 100%; max-width: 410px;
+    padding: 50px 28px 26px;
+    box-shadow: 0 30px 70px -20px rgba(0,0,0,.5);
+}
+.login-ball { position: absolute; left: 50%; top: -34px; width: 72px; height: 72px; margin-left: -36px; filter: drop-shadow(0 8px 6px rgba(0,0,0,.28)); animation: ballDrop .9s cubic-bezier(.3,.7,.4,1) both; }
+@keyframes ballDrop {
+    0% { transform: translateY(-120px) rotate(-120deg); opacity: 0; }
+    55% { transform: translateY(0) rotate(0); opacity: 1; }
+    72% { transform: translateY(-16px); }
+    88% { transform: translateY(0); }
+    94% { transform: translateY(-4px); }
+    100% { transform: translateY(0); }
+}
+.login-brand { font-family: var(--display); font-size: 31px; font-weight: 800; color: var(--court-deep); text-align: center; line-height: 1.05; letter-spacing: -.02em; }
+.login-sub { text-align: center; font-size: 14px; color: var(--muted); margin: 6px 0 22px; }
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+.login-form label { margin-bottom: 6px; }
+.login-form input { font-size: 16px; }
+.btn-login-main {
+    width: 100%; margin: 4px 0 0; border: none; border-radius: 12px; min-height: 54px;
+    background: var(--ball); color: var(--court-ink);
+    font-family: var(--display); font-size: 18px; font-weight: 800;
+    box-shadow: 0 4px 0 var(--ball-deep);
+}
+.btn-login-main:hover { background: #e2f550; filter: none; }
+.btn-login-main:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ball-deep); }
+.btn-google-bar { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin: 0; background: #fff; border: 1.5px solid var(--line); color: var(--ink); font-weight: 600; font-size: 15px; }
+.btn-google-bar:hover { background: #f4f7f1; filter: none; }
+.login-divider { text-align: center; font-size: 13px; color: #98a79f; position: relative; }
+.login-divider::before, .login-divider::after { content: ''; position: absolute; top: 50%; width: 42%; height: 1px; background: var(--line); }
+.login-divider::before { left: 0; } .login-divider::after { right: 0; }
+.btn-visitor-login { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin: 0; background: transparent; border: 1.5px solid var(--court); color: var(--court); font-size: 15px; font-weight: 700; }
+.btn-visitor-login:hover { background: #eef5f1; filter: none; }
+.visitor-form { flex-direction: column; gap: 10px; }
+.visitor-code { text-align: center; font-family: var(--display); font-size: 32px !important; font-weight: 800; letter-spacing: 12px; padding: 12px 8px !important; background: #f6f8f4; }
+.btn-visitor-go { margin: 0; background: var(--court); color: #fff; }
+.btn-ghost { margin: 0; background: transparent; color: var(--muted); border: 1.5px solid var(--line); font-weight: 600; font-size: 15px; }
+#loginMsg { text-align: center; font-size: 14px; min-height: 20px; margin-bottom: 8px; color: var(--danger); }
+#visitorCodeMsg2 { font-size: 13px; color: var(--danger); min-height: 16px; text-align: center; }
+
+/* ============================================================
+   BARRE DE NAVIGATION
+   ============================================================ */
+.nav-bar {
+    display: none; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    padding: calc(10px + env(safe-area-inset-top)) 18px 0;
+    background: var(--court-deep); color: #fff;
+    position: sticky; top: 0; z-index: 200;
+    box-shadow: 0 6px 20px -8px rgba(8,40,32,.55);
+}
+.brand-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.nav-brand { display: flex; align-items: center; gap: 10px; min-width: 0; font-family: var(--display); font-size: 21px; font-weight: 800; letter-spacing: -.01em; color: #fff; flex-shrink: 0; }
+.nav-brand svg { width: 34px; height: 34px; flex: none; }
+.nav-select-wrap { display: none; }
+.nav-user { font-size: 12px; color: rgba(255,255,255,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; margin-left: auto; }
+.nav-user { line-height: 1.9; }
+.nav-user span { padding: 4px 12px !important; font-family: var(--body); display: inline-block; line-height: 1.4; }
+.nav-r { display: flex; gap: 8px; align-items: center; }
+.nav-btn { width: auto; margin: 0; min-height: 38px; padding: 6px 14px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); color: #fff; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.nav-btn:hover { background: rgba(255,255,255,.22); filter: none; }
+
+/* Onglets : barre horizontale (bureau) → barre du bas (mobile) */
+.tabs-nav { flex: 1 0 100%; display: flex; gap: 6px; overflow-x: auto; padding: 6px 0 12px; scrollbar-width: none; }
+.tabs-nav::-webkit-scrollbar { display: none; }
+.tabs-nav button { flex: none; width: auto; min-height: 42px; margin: 0; padding: 8px 16px; display: inline-flex; align-items: center; gap: 9px; background: rgba(255,255,255,.09); color: rgba(255,255,255,.88); border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: none; }
+.tabs-nav button:hover { background: rgba(255,255,255,.18); filter: none; }
+.tabs-nav button.on { background: var(--ball); color: var(--court-ink); font-weight: 800; }
+.tabs-nav button[hidden] { display: none; }
+body.no-tabs .tabs-nav { display: none; }
+body.no-tabs .nav-bar { padding-bottom: 10px; }
+
+/* ---------- Règles de rôle (inchangées) ---------- */
+.saisie-mode .nav-select option:not([value="ventes"]) { display: none !important; }
+.readonly-mode .section button { opacity: .5; pointer-events: none; }
+.readonly-mode .section input,
+.readonly-mode .section select { opacity: .5; pointer-events: none; }
+.readonly-mode .tabs button { opacity: 1 !important; pointer-events: auto !important; }
+.top-bar button, .top-bar input { pointer-events: auto !important; opacity: 1 !important; }
+#loginPanel, #loginPanel * { pointer-events: auto !important; opacity: 1 !important; }
+.modal, .modal * { pointer-events: auto !important; opacity: 1 !important; }
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+@media (max-width: 720px) {
+    h2 { font-size: 23px; margin-bottom: 14px; }
+    .container { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    body.no-tabs .container { padding-bottom: 28px; }
+    .section { margin: 12px 10px; padding: 18px 14px; border-radius: 20px; }
+    .form-group, .section > button:not(.btn-small) { max-width: none; }
+
+    .nav-bar { padding: calc(8px + env(safe-area-inset-top)) 12px 8px; gap: 6px 8px; flex-wrap: nowrap; }
+    .nav-brand { font-size: 17px; gap: 8px; flex: 1 1 auto; }
+    .nav-brand svg { width: 30px; height: 30px; }
+    .nav-user { max-width: 100px; margin-left: 0; flex: none; }
+    .nav-r { flex: none; }
+    .nav-btn { padding: 6px 12px; min-height: 36px; }
+
+    /* barre d'onglets en bas, style application */
+    .tabs-nav {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 300;
+        flex: none; gap: 2px; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+        background: #fff; border-top: 1px solid var(--line);
+        box-shadow: 0 -8px 24px -10px rgba(8,40,32,.25);
+        scroll-snap-type: x proximity;
+    }
+    .tabs-nav button {
+        flex-direction: column; justify-content: center; gap: 3px;
+        min-width: 68px; min-height: 56px; padding: 6px 6px;
+        background: transparent; color: var(--muted);
+        border-radius: 14px; font-size: 11.5px; font-weight: 600;
+        scroll-snap-align: center;
+    }
+    .tabs-nav button i { font-size: 19px; }
+    .tabs-nav button:hover { background: transparent; }
+    .tabs-nav button.on { background: var(--ball); color: var(--court-ink); }
+
+    /* tableaux → cartes */
+    .mobile-table { overflow: visible; border: 0; background: none; border-radius: 0; margin-top: 10px; }
+    table, tbody, thead { display: block; }
+    thead:not(:has(th[onclick])) { display: none; }
+    thead tr { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+    thead th { display: none; }
+    thead th[onclick] { display: inline-flex; align-items: center; gap: 4px; padding: 9px 16px; border-radius: 999px; font-size: 13px; border: 0; }
+    tbody tr {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px;
+        background: #fff; border: 1px solid var(--line); border-radius: 16px;
+        padding: 14px; margin-bottom: 10px;
+        box-shadow: 0 1px 2px rgba(10,47,39,.05);
+    }
+    tbody tr:hover { background: #fff; }
+    td { display: block; padding: 0; border: 0 !important; min-width: 0; overflow-wrap: anywhere; font-size: 15.5px; font-weight: 600; }
+    td::before { content: attr(data-label); display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 2px; }
+    td[data-label="Total"], td[data-label="Montant"], td[data-label="Reste à Rembourser"] { color: var(--court); font-family: var(--display); font-weight: 800; font-size: 18px; }
+    td[data-label="Actions"] { grid-column: 1 / -1; padding-top: 10px; border-top: 1px dashed var(--line) !important; }
+    td[data-label="Actions"]::before { display: none; }
+    .action-icons { justify-content: flex-end; gap: 10px; }
+    .icon-btn { width: 46px; height: 46px; min-height: 46px; background: #f2f6ef; font-size: 18px; }
+
+    .summary-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    #stock .summary-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    #stock .summary-card { padding: 12px 10px 10px 16px; }
+    #stock .summary-card h3 { font-size: 12px; }
+    .summary-card { padding: 13px 12px; }
+    .summary-card p { font-size: 22px; }
+    #bilan .summary-card:nth-child(9) p, #bilan .summary-card:nth-child(8) p { font-size: 34px; }
+    #listeStock { grid-template-columns: 1fr; }
+    .login-box { padding: 48px 20px 22px; }
+    .user-form { grid-template-columns: 1fr; }
+    #listeArchives { grid-template-columns: 1fr; }
+    .inv-row { flex-wrap: wrap; }
+    .inv-row input { width: 100%; }
+    .modal { align-items: flex-end; padding: 10px; }
+    .modal-content { max-height: 90vh; overflow-y: auto; border-radius: 22px; }
+}
+@media (min-width: 721px) {
+    .section > h3 { margin-top: 34px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .login-ball, .section { animation: none; }
+    button, tbody tr { transition: none; }
+}
+
+/* ---------- Impression ---------- */
+@media print {
+    .no-print, .tabs-nav, .nav-bar { display: none !important; }
+    body { background: #fff !important; }
+    .section { box-shadow: none !important; margin: 0; padding: 0; animation: none; }
+    .container { padding: 0; }
+}
+
+/* ---------- Cases à cocher ---------- */
+input[type=checkbox] { width: 22px !important; min-height: 22px; height: 22px; padding: 0; accent-color: var(--court); flex: none; }
+label:has(> input[type=checkbox]) { color: var(--muted); }
+
+/* Bouton secondaire de la page Stock */
+#btnOuvrirInventaire { background: var(--court) !important; color: #fff !important; box-shadow: none !important; font-family: var(--body) !important; font-size: 15px !important; min-height: 48px !important; margin: 4px 0 10px !important; }
+
+/* ---------- Scan code-barre ---------- */
+.field-with-scan { display: flex; gap: 8px; align-items: stretch; }
+.field-with-scan select, .field-with-scan input { flex: 1; min-width: 0; }
+.btn-scan { background: var(--court); color: #fff; border: none; border-radius: 12px; width: auto; flex-shrink: 0; padding: 0 18px; font-size: 20px; min-height: 48px; margin: 0; box-shadow: 0 3px 0 var(--court-deep); }
+.btn-scan:active { background: var(--court-deep); transform: translateY(2px); box-shadow: 0 1px 0 var(--court-deep); }
+.btn-scan.btn-danger { background: var(--danger); box-shadow: 0 3px 0 #a8342a; }
+.btn-scan.btn-danger:active { background: #b53a2f; }
+#scannerAssignZone { background: #fff8e8; border: 1px solid #f4dfa9; border-radius: 14px; padding: 14px; }
+#scannerAssignZone select { margin-top: 4px; }
+#scannerManuelInput { min-height: 48px; border-radius: 12px !important; border: 1.5px solid var(--line) !important; background: #f6f8f4; }
+#scannerZone { border-radius: 16px !important; }
+#scannerStatus { color: var(--muted) !important; }
+
+/* ---------- Inventaire & archives ---------- */
+.inv-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; background: #f9fbf7; }
+.inv-row input { width: 96px; padding: 8px; border-radius: 10px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 18px; }
+#listeArchives { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; margin-top: 12px; }
+#listeArchives .stock-card strong { font-family: var(--display); font-size: 17px; color: var(--court-ink); }
+.icon-btn.btn-small { width: auto; border-radius: 12px; padding: 0 14px; min-height: 42px; font-size: 15px; font-weight: 700; gap: 6px; }
+#archiveDetailGrid { margin: 10px 0; }
+#archiveDetailGrid .summary-card { padding: 12px 12px 10px 16px; }
+#archiveDetailGrid .summary-card p { font-size: 20px; }
+.panel-google { background:#eef4fb; border-color:#cfe0f3; }
+
+    </style>
 <script>
 (function(A,d){typeof exports=="object"&&typeof module<"u"?d(exports):typeof define=="function"&&define.amd?define(["exports"],d):(A=typeof globalThis<"u"?globalThis:A||self,d(A.WebWasmBarcodeReader={}))})(this,(function(A){"use strict";const d="barcode-scanner-overlay-styles",b="rgba(0, 0, 0, 0.55)",y="#00ff88",g="#00ff88";function E(){if(document.getElementById(d))return;const h=document.createElement("style");h.id=d,h.textContent=`
     @keyframes scan-sweep {
@@ -305,52 +564,49 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
 </script>
 </head>
 <body>
-<!-- Écran de connexion style Tournoi Pickleball -->
+<!-- Écran de connexion : un terrain vu de dessus -->
 <div id="loginScreen">
     <div class="login-box">
-        <div class="login-brand">🍺 Bar Pickleball</div>
+        <svg class="login-ball" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18.5" fill="#d8ef3c" stroke="#a9c20f" stroke-width="1.5"/><g fill="#7f9608" opacity=".55"><circle cx="20" cy="8.5" r="2.6"/><circle cx="11" cy="13.5" r="2.6"/><circle cx="29" cy="13.5" r="2.6"/><circle cx="20" cy="20" r="2.6"/><circle cx="8.5" cy="23.5" r="2.6"/><circle cx="31.5" cy="23.5" r="2.6"/><circle cx="14.5" cy="30.5" r="2.6"/><circle cx="25.5" cy="30.5" r="2.6"/></g></svg>
+        <div class="login-brand">Bar du Pickleball</div>
         <div class="login-sub">Gestion de la buvette RSTH</div>
         <div id="loginMsg"></div>
         <div class="login-form">
             <div>
-                <label>Email</label>
-                <input type="email" id="emailInput" placeholder="votre@email.com" onkeydown="if(event.key==='Enter') loginWithEmail()">
+                <label for="emailInput">Email</label>
+                <input type="email" id="emailInput" placeholder="votre@email.com" autocomplete="email" onkeydown="if(event.key==='Enter') loginWithEmail()">
             </div>
             <div>
-                <label>Mot de passe</label>
-                <input type="password" id="passwordInput" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginWithEmail()">
+                <label for="passwordInput">Mot de passe</label>
+                <input type="password" id="passwordInput" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') loginWithEmail()">
             </div>
-            <button class="btn-login-main" onclick="loginWithEmail()">→ Se connecter</button>
+            <button class="btn-login-main" onclick="loginWithEmail()">Se connecter</button>
             <div class="login-divider">ou</div>
             <button class="btn-google-bar" onclick="loginWithGoogle()">
-                <i class="fab fa-google" style="color:#4285f4;font-size:16px;"></i> Connexion Google
+                <i class="fab fa-google" style="color:#4285f4;font-size:17px;"></i> Connexion Google
             </button>
             <div class="login-divider">ou</div>
             <!-- Formulaire visiteur inline dans le loginScreen -->
-            <div id="visitorForm" style="display:none;flex-direction:column;gap:10px;">
-                <input type="text" id="visitorCodeInput" placeholder="• • • • • •" maxlength="6"
-                    style="width:100%;padding:14px;border:2px solid #4a7090;border-radius:10px;font-size:28px;text-align:center;letter-spacing:10px;font-weight:700;background:#1a2a40;color:#7adcff;outline:none;box-sizing:border-box;"
+            <div id="visitorForm" class="visitor-form" style="display:none;">
+                <input type="text" id="visitorCodeInput" class="visitor-code" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
                     oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                <div id="visitorCodeMsg2" style="font-size:13px;color:#e74c3c;min-height:16px;text-align:center;"></div>
-                <button onclick="validerCodeVisiteur()"
-                    style="width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,#1a2a40,#2a3d56);border:1.5px solid #4a7090;color:#7adcff;font-family:'Oswald',sans-serif;font-size:16px;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;transition:all .2s;">
-                    👁️ Accéder
-                </button>
-                <button onclick="cacherFormVisiteur()"
-                    style="width:100%;padding:11px;border:1.5px solid #b0a090;border-radius:10px;background:transparent;color:#b0a090;font-family:'Exo 2',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;">
-                    ✕ Annuler
-                </button>
+                <div id="visitorCodeMsg2"></div>
+                <button class="btn-visitor-go" onclick="validerCodeVisiteur()"><i class="fas fa-eye"></i>&nbsp; Accéder</button>
+                <button class="btn-ghost" onclick="cacherFormVisiteur()">Annuler</button>
             </div>
-            <button class="btn-visitor-login" id="btnVisitorOpen" onclick="afficherFormVisiteur()">👁️ Accès Visiteur</button>
+            <button class="btn-visitor-login" id="btnVisitorOpen" onclick="afficherFormVisiteur()"><i class="fas fa-eye"></i> Accès visiteur</button>
         </div>
     </div>
 </div>
 
-<!-- Nav Bar style Tournoi -->
+<!-- Barre de navigation -->
 <div class="nav-bar no-print" id="navBar">
-    <div class="nav-brand">🍺 Bar Pickleball</div>
+    <div class="nav-brand">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18.5" fill="#d8ef3c" stroke="#a9c20f" stroke-width="1.5"/><g fill="#7f9608" opacity=".55"><circle cx="20" cy="8.5" r="2.6"/><circle cx="11" cy="13.5" r="2.6"/><circle cx="29" cy="13.5" r="2.6"/><circle cx="20" cy="20" r="2.6"/><circle cx="8.5" cy="23.5" r="2.6"/><circle cx="31.5" cy="23.5" r="2.6"/><circle cx="14.5" cy="30.5" r="2.6"/><circle cx="25.5" cy="30.5" r="2.6"/></g></svg>
+        <span class="brand-txt">Bar du Pickleball</span>
+    </div>
     <div class="nav-select-wrap">
-        <select class="nav-select" id="navSelect" onchange="changerSection(this.value)">
+        <select class="nav-select" id="navSelect" onchange="changerSection(this.value)" aria-label="Section">
             <option value="ventes">🛒 Ventes</option>
             <option value="offertes">🎁 Offertes</option>
             <option value="stock">📦 Stock</option>
@@ -365,9 +621,10 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
     </div>
     <span class="nav-user" id="userEmail"></span>
     <div class="nav-r">
-        <button id="adminLoginBtn" class="nav-btn" onclick="afficherLogin()">🔐 Connexion</button>
-        <button id="logoutBtn" class="nav-btn" onclick="doLogout()" style="display:none;">🚪 Déco</button>
+        <button id="adminLoginBtn" class="nav-btn" onclick="afficherLogin()"><i class="fas fa-lock"></i> Connexion</button>
+        <button id="logoutBtn" class="nav-btn" onclick="doLogout()" style="display:none;"><i class="fas fa-right-from-bracket"></i> Déco</button>
     </div>
+    <!-- les onglets sont générés par le script en bas de page à partir du sélecteur ci-dessus -->
 </div>
 
 <div class="container" style="display:none;">
@@ -609,38 +866,38 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
     <!-- Section Utilisateurs (admin only) -->
     <div id="utilisateurs" class="section no-print" style="display:none;">
         <h2>👥 Gestion des accès</h2>
-        <div style="background:#e8f4fd;border:1px solid #bee3f8;border-radius:10px;padding:16px;margin-bottom:20px;">
-            <h3 style="margin-bottom:10px;color:#2980b9;">👁️ Code d'accès visiteur</h3>
-            <p style="color:#555;font-size:13px;margin-bottom:12px;">Les visiteurs voient toutes les données sans pouvoir modifier.</p>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                <div style="background:white;border:2px solid #bee3f8;border-radius:8px;padding:8px 20px;font-size:22px;font-weight:700;letter-spacing:4px;color:#2980b9;" id="currentVisitorCode">——</div>
-                <button onclick="regenererCode()" class="btn-info btn-small" style="white-space:nowrap;">🔄 Nouveau code</button>
+        <div class="panel panel-visitor">
+            <h3>👁️ Code d'accès visiteur</h3>
+            <p class="panel-hint">Les visiteurs voient toutes les données sans pouvoir modifier.</p>
+            <div class="code-row">
+                <div class="code-chip" id="currentVisitorCode">——</div>
+                <button onclick="regenererCode()" class="btn-info btn-small">🔄 Nouveau code</button>
             </div>
-            <div id="visitorCodeMsg" style="margin-top:8px;font-size:12px;color:#27ae60;min-height:16px;"></div>
+            <div id="visitorCodeMsg" class="msg-ok"></div>
         </div>
-        <p style="color:#888;margin-bottom:16px;font-size:14px;">Ajoutez des vendeurs autorisés (accès Ventes uniquement).</p>
-        <div style="background:#f8f9fa;border-radius:10px;padding:16px;margin-bottom:20px;border:1px solid #dee2e6;">
-            <h3 style="margin-bottom:12px;">➕ Ajouter un utilisateur</h3>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-                <div class="form-group" style="flex:1;min-width:150px;margin:0;"><label>Email</label><input id="newUserEmail" type="email" placeholder="prenom@email.com"></div>
-                <div class="form-group" style="flex:1;min-width:130px;margin:0;"><label>Mot de passe</label><input id="newUserPassword" type="password" placeholder="Min. 6 caractères"></div>
-                <div class="form-group" style="flex:1;min-width:120px;margin:0;"><label>Nom (optionnel)</label><input id="newUserName" type="text" placeholder="Jean Dupont"></div>
-                <button onclick="addUser()" class="btn-success" style="white-space:nowrap;">✅ Ajouter</button>
+        <p class="panel-hint">Ajoutez des vendeurs autorisés (accès Ventes uniquement).</p>
+        <div class="panel">
+            <h3>➕ Ajouter un utilisateur</h3>
+            <div class="user-form">
+                <div class="form-group"><label>Email</label><input id="newUserEmail" type="email" placeholder="prenom@email.com"></div>
+                <div class="form-group"><label>Mot de passe</label><input id="newUserPassword" type="password" placeholder="Min. 6 caractères"></div>
+                <div class="form-group"><label>Nom (optionnel)</label><input id="newUserName" type="text" placeholder="Jean Dupont"></div>
+                <button onclick="addUser()" class="btn-success">✅ Ajouter</button>
             </div>
-            <div id="addUserMsg" style="margin-top:8px;font-size:13px;text-align:center;min-height:16px;"></div>
+            <div id="addUserMsg"></div>
         </div>
-        <div style="background:#f0f7ff;border-radius:10px;padding:16px;margin-bottom:20px;border:1px solid #cfe2ff;">
-            <h3 style="margin-bottom:6px;">🔵 Autoriser un compte Google existant</h3>
-            <p style="color:#888;margin-bottom:12px;font-size:13px;">Pour les vendeurs qui se connectent avec le bouton "Connexion Google" (pas de mot de passe à gérer).</p>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-                <div class="form-group" style="flex:1;min-width:180px;margin:0;"><label for="newGoogleUserEmail">Email Google</label><input id="newGoogleUserEmail" type="email" placeholder="prenom@gmail.com"></div>
-                <div class="form-group" style="flex:1;min-width:120px;margin:0;"><label for="newGoogleUserName">Nom (optionnel)</label><input id="newGoogleUserName" type="text" placeholder="Jean Dupont"></div>
-                <button onclick="addGoogleUser()" class="btn-info" style="white-space:nowrap;">🔵 Autoriser</button>
+        <div class="panel panel-google">
+            <h3>🔵 Autoriser un compte Google existant</h3>
+            <p class="panel-hint">Pour les vendeurs qui se connectent avec le bouton « Connexion Google » (pas de mot de passe à gérer).</p>
+            <div class="user-form">
+                <div class="form-group"><label for="newGoogleUserEmail">Email Google</label><input id="newGoogleUserEmail" type="email" placeholder="prenom@gmail.com"></div>
+                <div class="form-group"><label for="newGoogleUserName">Nom (optionnel)</label><input id="newGoogleUserName" type="text" placeholder="Jean Dupont"></div>
+                <button onclick="addGoogleUser()" class="btn-info">🔵 Autoriser</button>
             </div>
             <div id="addGoogleUserMsg" style="margin-top:8px;font-size:13px;text-align:center;min-height:16px;"></div>
         </div>
-        <h3 style="margin-bottom:12px;">📋 Utilisateurs autorisés</h3>
-        <div id="usersList"><p style="color:#888;text-align:center;padding:20px;">Chargement...</p></div>
+        <h3>📋 Utilisateurs autorisés</h3>
+        <div id="usersList"><p class="panel-hint" style="text-align:center;padding:20px;">Chargement...</p></div>
     </div>
 </div>
 
@@ -2280,5 +2537,100 @@ document.addEventListener('focus', function(e) {
 
 document.addEventListener('DOMContentLoaded', initialiser);
 </script>
+<script>
+/* Habillage mobile / navigation — n'interfère pas avec la logique de l'appli */
+(function () {
+    var ICONS = { ventes:'fa-cash-register', offertes:'fa-gift', stock:'fa-boxes-stacked', achats:'fa-basket-shopping',
+                  boissons:'fa-beer-mug-empty', archives:'fa-box-archive', bilan:'fa-chart-pie', apports:'fa-hand-holding-dollar',
+                  remboursements:'fa-money-bill-transfer', utilisateurs:'fa-users' };
+    var LABELS = { ventes:'Ventes', offertes:'Offertes', stock:'Stock', achats:'Achats', boissons:'Produits', bilan:'Bilan', archives:'Archives',
+                   apports:'Apports', remboursements:'Rembours.', utilisateurs:'Accès' };
+    var FULL = { remboursements:'Remboursements', utilisateurs:'Utilisateurs' };
+    var isMobile = function () { return window.matchMedia('(max-width: 720px)').matches; };
+
+    /* 1. Étiquettes des cellules : permet d'afficher chaque ligne de tableau en carte sur téléphone */
+    function labelTables() {
+        document.querySelectorAll('.mobile-table table').forEach(function (t) {
+            var heads = Array.prototype.map.call(t.querySelectorAll('thead th'), function (th) {
+                return (th.childNodes[0] ? th.childNodes[0].textContent : '').trim();
+            });
+            t.querySelectorAll('tbody tr').forEach(function (tr) {
+                Array.prototype.forEach.call(tr.children, function (td, i) {
+                    if (td.getAttribute('data-label') !== heads[i]) td.setAttribute('data-label', heads[i] || '');
+                });
+            });
+        });
+    }
+    var pending = false;
+    function scheduleLabels() { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; labelTables(); }); }
+    document.querySelectorAll('.mobile-table tbody').forEach(function (tb) {
+        new MutationObserver(scheduleLabels).observe(tb, { childList: true });
+    });
+    labelTables();
+
+    /* 2. Onglets : barre en haut (bureau) / barre du bas (mobile), synchronisés avec le sélecteur d'origine */
+    var sel = document.getElementById('navSelect'), bar = document.getElementById('navBar');
+    if (sel && bar) {
+        var nav = document.createElement('nav');
+        nav.className = 'tabs-nav no-print';
+        nav.setAttribute('aria-label', 'Sections');
+        Array.prototype.forEach.call(sel.options, function (o) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.setAttribute('data-v', o.value);
+            b.innerHTML = '<i class="fas ' + (ICONS[o.value] || 'fa-circle') + '" aria-hidden="true"></i><span>' + (LABELS[o.value] || o.textContent) + '</span>';
+            b.addEventListener('click', function () { if (window.changerSection) window.changerSection(o.value); sync(true); });
+            nav.appendChild(b);
+        });
+        bar.appendChild(nav);
+
+        var last = '';
+        function sync(force) {
+            var saisie = document.body.classList.contains('saisie-mode');
+            var usersOpt = document.getElementById('usersNavOption');
+            var visible = 0;
+            Array.prototype.forEach.call(nav.children, function (b) {
+                var v = b.getAttribute('data-v'), hide = false;
+                if (saisie && v !== 'ventes') hide = true;
+                if (v === 'utilisateurs' && usersOpt && usersOpt.style.display === 'none') hide = true;
+                b.hidden = hide; if (!hide) visible++;
+                var on = sel.value === v;
+                b.classList.toggle('on', on);
+                if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+                if (on && (force || last !== v)) {
+                    last = v;
+                    nav.scrollTo({ left: b.offsetLeft - nav.clientWidth / 2 + b.offsetWidth / 2, behavior: 'smooth' });
+                }
+            });
+            document.body.classList.toggle('no-tabs', visible <= 1);
+        }
+        sync(true);
+        setInterval(sync, 300);
+    }
+
+    /* 3. Quantités : boutons − / + pour saisir au pouce */
+    ['venteQuantite', 'offertQuantite', 'achatQuantite'].forEach(function (id) {
+        var inp = document.getElementById(id);
+        if (!inp) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'stepper';
+        inp.parentNode.insertBefore(wrap, inp);
+        function mk(txt, d, label) {
+            var b = document.createElement('button');
+            b.type = 'button'; b.className = 'step-btn'; b.textContent = txt; b.setAttribute('aria-label', label);
+            b.addEventListener('click', function () {
+                inp.value = Math.max(1, (parseInt(inp.value, 10) || 0) + d);
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+            return b;
+        }
+        wrap.appendChild(mk('−', -1, 'Retirer 1'));
+        wrap.appendChild(inp);
+        wrap.appendChild(mk('+', 1, 'Ajouter 1'));
+        inp.setAttribute('inputmode', 'numeric');
+    });
+})();
+</script>
+
 </body>
 </html>
