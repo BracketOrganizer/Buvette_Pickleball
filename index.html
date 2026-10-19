@@ -2591,7 +2591,7 @@ async function updateUIForUser(user) {
     if (user) {
         // ── Utilisateur Firebase connecté ──────────────────────────────
         currentUser = user; isVisitor = false;
-        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","checheux@gmail.com"];
+        const adminEmails = ["bracket.organizer@gmail.com","quinquin44@gmail.com","checheux@gmail.com"];
         isAdmin = adminEmails.map(normaliserEmail).includes(normaliserEmail(user.email));
 
         if (isAdmin) {
