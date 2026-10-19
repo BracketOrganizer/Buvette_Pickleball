@@ -391,7 +391,12 @@ body.no-tabs .nav-bar { padding-bottom: 10px; }
         box-shadow: 0 1px 2px rgba(10,47,39,.05);
     }
     tbody tr:hover { background: #fff; }
-    td { display: block; padding: 0; border: 0 !important; min-width: 0; overflow-wrap: anywhere; font-size: 15.5px; font-weight: 600; }
+    td { display: block; padding: 0; border: 0 !important; min-width: 0; overflow-wrap: break-word; word-break: normal; font-size: 15.5px; font-weight: 600; }
+    /* cellule "produit" (miniature + nom) : toute la largeur de la carte, le nom ne se comprime plus */
+    td:has(> div[style*="display:flex"]) { grid-column: 1 / -1; }
+    td:has(> div[style*="display:flex"]) > div { flex-wrap: nowrap; min-width: 0; }
+    td:has(> div[style*="display:flex"]) > div > span:not([style]) { flex: 1 1 auto; min-width: 0; font-family: var(--display); font-size: 17px; font-weight: 700; color: var(--court-ink); }
+    td:has(> div[style*="display:flex"]) > div > button { width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0; flex: none; }
     td::before { content: attr(data-label); display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 2px; }
     td[data-label="Total"], td[data-label="Montant"], td[data-label="Reste à Rembourser"] { color: var(--court); font-family: var(--display); font-weight: 800; font-size: 18px; }
     td[data-label="Actions"] { grid-column: 1 / -1; padding-top: 10px; border-top: 1px dashed var(--line) !important; }
@@ -600,6 +605,31 @@ body.sheet-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .toast, .tile { transition: none; } }
 @media print { .tp, .tp-bar, .stock-tools, .combo-btn, .sheet-backdrop, .toast { display: none !important; } }
 
+/* Demandes d'accès */
+.req-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid #cfe0f3; }
+.req-row:first-child { border-top: 0; }
+.req-info { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; }
+.req-info b { overflow-wrap: anywhere; }
+.req-info small { color: var(--muted); }
+.req-row button { margin: 0; }
+
+/* Accès visiteurs : interrupteur Ouvert / Fermé */
+.visitor-msg { text-align: center; font-size: 13px; min-height: 16px; margin-top: -6px; }
+.state-pill { font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px; }
+.state-pill.on { background: #d9f2e1; color: #11692f; }
+.state-pill.off { background: #e6e9e4; color: var(--muted); }
+.switch { position: relative; display: block; width: 176px; max-width: 100%; min-height: 54px; margin: 10px 0 0; padding: 0 20px 0 62px; text-align: center; border-radius: 999px;
+    background: #cdd8c8; color: var(--court-ink); font-family: var(--display); font-size: 19px; font-weight: 800; box-shadow: inset 0 2px 4px rgba(0,0,0,.12); transition: background .2s, padding .2s; }
+.switch:hover { filter: none; }
+.switch-knob { position: absolute; top: 5px; left: 5px; width: 44px; height: 44px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.28); transition: transform .22s cubic-bezier(.3,.7,.4,1); }
+.switch[aria-checked="true"] { background: var(--ok); color: #fff; padding: 0 62px 0 20px; }
+.switch[aria-checked="true"] .switch-knob { transform: translateX(122px); }
+.switch:disabled { opacity: .6; }
+@media (prefers-reduced-motion: reduce) { .switch, .switch-knob { transition: none; } }
+
+.chips.duree { flex-wrap: wrap; overflow: visible; align-items: center; margin-top: 12px; gap: 8px; }
+.duree-label { font-size: 14px; font-weight: 600; color: var(--court-ink); margin-right: 2px; }
+
     </style>
 <script>
 (function(A,d){typeof exports=="object"&&typeof module<"u"?d(exports):typeof define=="function"&&define.amd?define(["exports"],d):(A=typeof globalThis<"u"?globalThis:A||self,d(A.WebWasmBarcodeReader={}))})(this,(function(A){"use strict";const d="barcode-scanner-overlay-styles",b="rgba(0, 0, 0, 0.55)",y="#00ff88",g="#00ff88";function E(){if(document.getElementById(d))return;const h=document.createElement("style");h.id=d,h.textContent=`
@@ -724,15 +754,8 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
                 <i class="fab fa-google" style="color:#4285f4;font-size:17px;"></i> Connexion Google
             </button>
             <div class="login-divider">ou</div>
-            <!-- Formulaire visiteur inline dans le loginScreen -->
-            <div id="visitorForm" class="visitor-form" style="display:none;">
-                <input type="text" id="visitorCodeInput" class="visitor-code" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
-                    oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                <div id="visitorCodeMsg2"></div>
-                <button class="btn-visitor-go" onclick="validerCodeVisiteur()"><i class="fas fa-eye"></i>&nbsp; Accéder</button>
-                <button class="btn-ghost" onclick="cacherFormVisiteur()">Annuler</button>
-            </div>
-            <button class="btn-visitor-login" id="btnVisitorOpen" onclick="afficherFormVisiteur()"><i class="fas fa-eye"></i> Accès visiteur</button>
+            <div id="visitorMsg" class="visitor-msg" aria-live="polite"></div>
+            <button class="btn-visitor-login" id="btnVisitorOpen" onclick="entrerVisiteur()"><i class="fas fa-eye"></i> Accès visiteur</button>
         </div>
     </div>
 </div>
@@ -1009,34 +1032,27 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
             <span id="loginPanelMsg" style="font-size:12px;color:#e74c3c;"></span>
         </div>
         <div class="panel panel-visitor">
-            <h3>👁️ Code d'accès visiteur</h3>
-            <p class="panel-hint">Les visiteurs voient toutes les données sans pouvoir modifier.</p>
-            <div class="code-row">
-                <div class="code-chip" id="currentVisitorCode">——</div>
-                <button onclick="regenererCode()" class="btn-info btn-small">🔄 Nouveau code</button>
+            <div class="panel-head">
+                <h3>👁️ Accès visiteurs</h3>
+                <span id="visiteurEtat" class="state-pill off">Accès visiteurs fermé</span>
             </div>
-            <div id="visitorCodeMsg" class="msg-ok"></div>
-        </div>
-        <p class="panel-hint">Ajoutez des vendeurs autorisés (accès Ventes uniquement).</p>
-        <div class="panel">
-            <h3>➕ Ajouter un utilisateur</h3>
-            <div class="user-form">
-                <div class="form-group"><label>Email</label><input id="newUserEmail" type="email" placeholder="prenom@email.com"></div>
-                <div class="form-group"><label>Mot de passe</label><input id="newUserPassword" type="password" placeholder="Min. 6 caractères"></div>
-                <div class="form-group"><label>Nom (optionnel)</label><input id="newUserName" type="text" placeholder="Jean Dupont"></div>
-                <button onclick="addUser()" class="btn-success">✅ Ajouter</button>
+            <p class="panel-hint">Ouvert : toute personne qui touche « Accès visiteur » sur l'écran de connexion peut consulter les données, sans rien modifier. L'accès se referme tout seul à l'heure choisie. Fermé : personne ne peut les voir (les visiteurs en cours sont déconnectés).</p>
+            <div id="visiteurDuree" class="chips duree" role="group" aria-label="Durée d'ouverture">
+                <span class="duree-label">Ouvrir pour :</span>
+                <button type="button" class="chip" data-d="2" onclick="choisirDureeVisiteur('2')">2 h</button>
+                <button type="button" class="chip on" data-d="4" onclick="choisirDureeVisiteur('4')">4 h</button>
+                <button type="button" class="chip" data-d="minuit" onclick="choisirDureeVisiteur('minuit')">Jusqu'à minuit</button>
+                <button type="button" class="chip" data-d="0" onclick="choisirDureeVisiteur('0')">Sans limite</button>
             </div>
-            <div id="addUserMsg"></div>
+            <button id="visiteurToggle" type="button" class="switch" role="switch" aria-checked="false" aria-label="Accès visiteurs" onclick="basculerAccesVisiteurs()">
+                <span class="switch-knob"></span><span class="switch-label">Fermé</span>
+            </button>
+            <div id="visiteurMsg" class="msg-ok"></div>
         </div>
         <div class="panel panel-google">
-            <h3>🔵 Autoriser un compte Google existant</h3>
-            <p class="panel-hint">Pour les vendeurs qui se connectent avec le bouton « Connexion Google » (pas de mot de passe à gérer).</p>
-            <div class="user-form">
-                <div class="form-group"><label for="newGoogleUserEmail">Email Google</label><input id="newGoogleUserEmail" type="email" placeholder="prenom@gmail.com"></div>
-                <div class="form-group"><label for="newGoogleUserName">Nom (optionnel)</label><input id="newGoogleUserName" type="text" placeholder="Jean Dupont"></div>
-                <button onclick="addGoogleUser()" class="btn-info">🔵 Autoriser</button>
-            </div>
-            <div id="addGoogleUserMsg" style="margin-top:8px;font-size:13px;text-align:center;min-height:16px;"></div>
+            <h3>🔵 Demandes d'accès (comptes Google)</h3>
+            <p class="panel-hint">Un vendeur clique une première fois sur « Connexion Google » : il voit « accès non autorisé » et sa demande apparaît ici. Vous l'autorisez en un clic, il se reconnecte, c'est réglé.</p>
+            <div id="demandesAcces"><p class="panel-hint">Chargement...</p></div>
         </div>
         <h3>📋 Utilisateurs autorisés</h3>
         <div id="usersList"><p class="panel-hint" style="text-align:center;padding:20px;">Chargement...</p></div>
@@ -1906,7 +1922,7 @@ function changerSection(sectionId) {
         achats: afficherAchats, boissons: afficherBoissons, apports: afficherApports,
         remboursements: afficherRemboursements, offertes: afficherOfferts,
         archives: chargerArchives,
-        utilisateurs: () => { if(isAdmin) loadUsersList(); }
+        utilisateurs: () => { if(isAdmin) { loadUsersList(); chargerDemandesAcces(); } }
     };
     if(map[sectionId]) map[sectionId]();
 }
@@ -2447,6 +2463,124 @@ async function removeUser(uid, email) {
     try { await deleteDoc(doc(db, 'authorizedUsers', uid)); alert(`✅ ${email} retiré`); loadUsersList(); }
     catch(e) { alert('❌ Erreur suppression'); }
 }
+// ===== ACCÈS VISITEURS : ouvert / fermé (avec fermeture automatique) =====
+let visiteursOuverts = false, visiteursFinMs = 0, unsubVisiteur = null, timerFinVisiteur = null, dureeVisiteur = '4';
+function accesOuvert(c) { return !!c && c.ouvert === true && (!c.finMs || Date.now() < c.finMs); }
+function visiteursOuvertsMaintenant() { return visiteursOuverts && (!visiteursFinMs || Date.now() < visiteursFinMs); }
+function heureFr(ms) {
+    const d = new Date(ms), h = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return d.toDateString() === new Date().toDateString() ? h : d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + h;
+}
+function majAffichageAccesVisiteurs() {
+    const ouvert = visiteursOuvertsMaintenant();
+    const t = document.getElementById('visiteurToggle'), pill = document.getElementById('visiteurEtat'), ch = document.getElementById('visiteurDuree');
+    if (t) { t.setAttribute('aria-checked', ouvert ? 'true' : 'false'); const l = t.querySelector('.switch-label'); if (l) l.textContent = ouvert ? 'Ouvert' : 'Fermé'; }
+    if (pill) {
+        pill.textContent = ouvert ? (visiteursFinMs ? "Ouvert jusqu'à " + heureFr(visiteursFinMs) : 'Ouvert, sans limite de durée') : 'Accès visiteurs fermé';
+        pill.className = 'state-pill ' + (ouvert ? 'on' : 'off');
+    }
+    if (ch) {
+        ch.style.display = ouvert ? 'none' : '';
+        ch.querySelectorAll('.chip').forEach(b => b.classList.toggle('on', b.getAttribute('data-d') === dureeVisiteur));
+    }
+}
+function choisirDureeVisiteur(d) { dureeVisiteur = d; majAffichageAccesVisiteurs(); }
+async function chargerAccesVisiteurs() {
+    if (!isAdmin) return;
+    try {
+        const snap = await getDoc(doc(db, 'barConfig', 'visiteurAcces'));
+        const c = snap.exists() ? snap.data() : null;
+        visiteursOuverts = !!c && c.ouvert === true; visiteursFinMs = (c && c.finMs) || 0;
+    } catch (e) { visiteursOuverts = false; visiteursFinMs = 0; }
+    majAffichageAccesVisiteurs();
+    if (!window.__visTick) { window.__visTick = setInterval(() => { if (isAdmin) majAffichageAccesVisiteurs(); }, 30000); }
+}
+async function basculerAccesVisiteurs() {
+    if (!isAdmin) return;
+    const t = document.getElementById('visiteurToggle'), msg = document.getElementById('visiteurMsg');
+    const nouvel = !visiteursOuvertsMaintenant();
+    let fin = 0;
+    if (nouvel) {
+        if (dureeVisiteur === '2' || dureeVisiteur === '4') fin = Date.now() + Number(dureeVisiteur) * 3600000;
+        else if (dureeVisiteur === 'minuit') { const d = new Date(); d.setHours(24, 0, 0, 0); fin = d.getTime(); }
+    }
+    if (t) t.disabled = true;
+    try {
+        await setDoc(doc(db, 'barConfig', 'visiteurAcces'), { ouvert: nouvel, finMs: fin, updatedAt: new Date().toISOString(), updatedBy: (currentUser && currentUser.email) || '' });
+        visiteursOuverts = nouvel; visiteursFinMs = fin;
+        if (msg) { msg.textContent = nouvel ? (fin ? "✓ Accès visiteurs ouvert jusqu'à " + heureFr(fin) + '.' : '✓ Accès visiteurs ouvert (sans limite : pensez à le fermer).') : '✓ Accès visiteurs fermé : les visiteurs connectés sont déconnectés.'; setTimeout(() => { msg.textContent = ''; }, 5000); }
+    } catch (e) { alert('❌ Erreur : ' + (e.code || e.message)); }
+    finally { if (t) t.disabled = false; majAffichageAccesVisiteurs(); }
+}
+async function entrerVisiteur() {
+    const msg = document.getElementById('visitorMsg');
+    if (msg) { msg.style.color = '#888'; msg.textContent = 'Vérification...'; }
+    try {
+        const snap = await getDoc(doc(db, 'barConfig', 'visiteurAcces'));
+        if (snap.exists() && accesOuvert(snap.data())) {
+            if (msg) msg.textContent = '';
+            isVisitor = true;
+            updateUIForUser(null);
+            surveillerAccesVisiteur();
+        } else if (msg) { msg.style.color = '#e74c3c'; msg.textContent = "L'accès visiteur est fermé pour le moment."; }
+    } catch (e) { if (msg) { msg.style.color = '#e74c3c'; msg.textContent = 'Erreur de connexion (' + (e.code || e.message) + ')'; } }
+}
+function surveillerAccesVisiteur() {
+    if (unsubVisiteur) { unsubVisiteur(); unsubVisiteur = null; }
+    if (timerFinVisiteur) { clearTimeout(timerFinVisiteur); timerFinVisiteur = null; }
+    const fermer = () => { if (isVisitor) quitterVisiteur(true); };
+    unsubVisiteur = onSnapshot(doc(db, 'barConfig', 'visiteurAcces'), (s) => {
+        const c = s.exists() ? s.data() : null;
+        if (timerFinVisiteur) { clearTimeout(timerFinVisiteur); timerFinVisiteur = null; }
+        if (!accesOuvert(c)) { fermer(); return; }
+        // l'heure de fin n'est pas un changement de données : on programme la déconnexion nous-mêmes
+        if (c.finMs) timerFinVisiteur = setTimeout(fermer, Math.max(0, c.finMs - Date.now()));
+    }, fermer);
+}
+function quitterVisiteur(ferme) {
+    if (unsubVisiteur) { unsubVisiteur(); unsubVisiteur = null; }
+    if (timerFinVisiteur) { clearTimeout(timerFinVisiteur); timerFinVisiteur = null; }
+    if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+    isVisitor = false;
+    updateUIForUser(null);
+    if (ferme) alert("L'accès visiteur est maintenant fermé.");
+}
+
+// ===== DEMANDES D'ACCÈS (vendeurs Google) =====
+async function chargerDemandesAcces() {
+    const el = document.getElementById('demandesAcces'); if (!el || !isAdmin) return;
+    try {
+        const snap = await getDocs(collection(db, 'accessRequests'));
+        el.innerHTML = '';
+        if (snap.empty) { const p = document.createElement('p'); p.className = 'panel-hint'; p.textContent = 'Aucune demande en attente.'; el.appendChild(p); return; }
+        snap.forEach(d => {
+            const r = d.data();
+            const row = document.createElement('div'); row.className = 'req-row';
+            const info = document.createElement('div'); info.className = 'req-info';
+            const b = document.createElement('b'); b.textContent = r.email || '(sans email)';
+            const s = document.createElement('small'); s.textContent = (r.name ? r.name + ' · ' : '') + (r.requestedAt ? new Date(r.requestedAt).toLocaleString('fr-FR') : '');
+            info.appendChild(b); info.appendChild(s);
+            const ok = document.createElement('button'); ok.type = 'button'; ok.className = 'btn-success btn-small'; ok.textContent = 'Autoriser';
+            ok.addEventListener('click', () => autoriserDemande(d.id, r));
+            const no = document.createElement('button'); no.type = 'button'; no.className = 'btn-danger btn-small'; no.textContent = 'Refuser';
+            no.addEventListener('click', () => refuserDemande(d.id, r.email));
+            row.appendChild(info); row.appendChild(ok); row.appendChild(no); el.appendChild(row);
+        });
+    } catch (e) { el.innerHTML = '<p class="panel-hint" style="color:#e74c3c;">Erreur de chargement des demandes (' + (e.code || e.message) + ')</p>'; }
+}
+async function autoriserDemande(uid, r) {
+    if (!isAdmin) return;
+    try {
+        await setDoc(doc(db, 'authorizedUsers', uid), { email: (r.email || '').toLowerCase(), name: r.name || '', createdAt: new Date().toISOString(), createdBy: currentUser?.email || 'admin', role: 'saisie', method: 'google' });
+        await deleteDoc(doc(db, 'accessRequests', uid));
+        loadUsersList(); chargerDemandesAcces();
+    } catch (e) { alert('❌ Erreur : ' + (e.code || e.message)); }
+}
+async function refuserDemande(uid, email) {
+    if (!isAdmin || !confirm('Refuser la demande de ' + (email || 'cet utilisateur') + ' ?')) return;
+    try { await deleteDoc(doc(db, 'accessRequests', uid)); chargerDemandesAcces(); }
+    catch (e) { alert('❌ Erreur : ' + (e.code || e.message)); }
+}
 async function updateUIForUser(user) {
     const adminLoginBtn = document.getElementById('adminLoginBtn');
     const logoutBtn     = document.getElementById('logoutBtn');
@@ -2457,7 +2591,7 @@ async function updateUIForUser(user) {
     if (user) {
         // ── Utilisateur Firebase connecté ──────────────────────────────
         currentUser = user; isVisitor = false;
-        const adminEmails = ["quinquin44@gmail.com","checheux@gmail.com","bracket.organizer@gmail.com"];
+        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","checheux@gmail.com"];
         isAdmin = adminEmails.map(normaliserEmail).includes(normaliserEmail(user.email));
 
         if (isAdmin) {
@@ -2478,7 +2612,7 @@ async function updateUIForUser(user) {
             afficherToutesLesDonnees(); mettreAJourSelects();
             changerSection('ventes');
             startRealtimeSync();
-            chargerCodeVisiteur();
+            chargerAccesVisiteurs();
         } else {
             // Vérifier que l'utilisateur est dans authorizedUsers (par UID, ou par email pour les comptes Google autorisés à l'avance)
             try {
@@ -2487,9 +2621,11 @@ async function updateUIForUser(user) {
                 if (snap.exists()) {
                     autorise = true;
                 } else if (user.email) {
-                    const q = query(collection(db, 'authorizedUsers'), where('email', '==', normaliserEmail(user.email)));
-                    const qSnap = await getDocs(q);
-                    if (!qSnap.empty) autorise = true;
+                    try {
+                        const q = query(collection(db, 'authorizedUsers'), where('email', '==', normaliserEmail(user.email)));
+                        const qSnap = await getDocs(q);
+                        if (!qSnap.empty) autorise = true;
+                    } catch (eq) { /* recherche par email refusée par les règles : on passe à la demande d'accès */ }
                 }
                 if (autorise) {
                     debugLog('→ Reconnu comme VENDEUR autorisé');
@@ -2513,7 +2649,13 @@ async function updateUIForUser(user) {
                 } else {
                     // Non autorisé : déconnexion immédiate
                     debugLog('→ NON autorisé (ni admin, ni dans authorizedUsers) → déconnexion');
+                    let demandeEnvoyee = false;
+                    try {
+                        await setDoc(doc(db, 'accessRequests', user.uid), { email: (user.email || '').toLowerCase(), name: user.displayName || '', requestedAt: new Date().toISOString() });
+                        demandeEnvoyee = true;
+                    } catch (er) { debugLog('→ demande d\'accès non enregistrée: ' + (er.code || er.message)); }
                     await signOut(auth);
+                    if (demandeEnvoyee) alert('Accès non autorisé pour le moment.\n\nVotre demande a été envoyée à l\'administrateur : une fois validée, reconnectez-vous.');
                     showAuthMsg('Acces refuse. Contactez l administrateur.', 'red');
                     afficherLogin();
                 }
@@ -2651,7 +2793,7 @@ getRedirectResult(auth).then((result) => {
 Object.assign(window, {
     toggleLoginPanel, loginWithGoogle, loginWithEmail, addUser, addGoogleUser, removeUser, effacerDebugLog,
     ouvrirModalVisiteur, fermerModalVisiteur, validerCodeVisiteur, regenererCode, afficherFormVisiteur, cacherFormVisiteur,
-    doLogout: async () => { if(isVisitor){ isVisitor=false; await updateUIForUser(null); } else { await signOut(auth); } },
+    doLogout: async () => { if(isVisitor){ quitterVisiteur(false); } else { await signOut(auth); } },
     sauvegarderDonnees, imprimerDonnees, exporterDonnees, importerDonnees,
     demanderReset, fermerModal, reinitialiserDonnees, changerSection,
     ajouterVente, supprimerVente, activerEditionVente, annulerEditionVente, sauvegarderModificationVente,
@@ -2665,7 +2807,8 @@ Object.assign(window, {
     ouvrirScanner, fermerScanner, associerCodeBarreScanne, validerCodeManuel, toggleScannerCamera, toggleScannerTorch, creerNouveauProduitDepuisScan,
     declencherPhotoNouveauProduit, onPhotoNouveauProduitSelectionnee, declencherChangementPhoto, onPhotoProduitExistantSelectionnee, masquerPhotoPreview, toggleAchatGratuit,
     ouvrirInventaireModal, fermerInventaireModal, validerInventaireEtNouvelleSaison,
-    getBarData: () => data, calculerStock, emojiProduit
+    getBarData: () => data, calculerStock, emojiProduit, chargerDemandesAcces, autoriserDemande, refuserDemande,
+    entrerVisiteur, basculerAccesVisiteurs, chargerAccesVisiteurs, choisirDureeVisiteur
 });
 
 // Sélectionne automatiquement le contenu des champs texte/nombre au focus,
