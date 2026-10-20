@@ -2973,7 +2973,17 @@ Object.assign(window, {
 
 // Sélectionne automatiquement le contenu des champs texte/nombre au focus,
 // pour pouvoir retaper directement une valeur sans devoir l'effacer à la main
-// (fonctionne au clavier com<script>
+// (fonctionne au clavier comme au tactile, y compris sur les lignes ajoutées dynamiquement).
+document.addEventListener('focus', function(e) {
+    const el = e.target;
+    if (el && el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number') && !el.readOnly && !el.disabled) {
+        setTimeout(() => { try { el.select(); } catch(err) {} }, 0);
+    }
+}, true);
+
+document.addEventListener('DOMContentLoaded', initialiser);
+</script>
+<script>
 /* Habillage mobile / navigation — n'interfère pas avec la logique de l'appli */
 (function () {
     var ICONS = { ventes:'fa-cash-register', offertes:'fa-gift', stock:'fa-boxes-stacked', achats:'fa-basket-shopping',
@@ -3326,15 +3336,5 @@ Object.assign(window, {
 })();
 </script>
 
-me au tactile, y compris sur les lignes ajoutées dynamiquement).
-document.addEventListener('focus', function(e) {
-    const el = e.target;
-    if (el && el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number') && !el.readOnly && !el.disabled) {
-        setTimeout(() => { try { el.select(); } catch(err) {} }, 0);
-    }
-}, true);
-
-document.addEventListener('DOMContentLoaded', initialiser);
-</script>
 </body>
 </html>
