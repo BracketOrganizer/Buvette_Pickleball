@@ -630,6 +630,17 @@ body.sheet-open { overflow: hidden; }
 .chips.duree { flex-wrap: wrap; overflow: visible; align-items: center; margin-top: 12px; gap: 8px; }
 .duree-label { font-size: 14px; font-weight: 600; color: var(--court-ink); margin-right: 2px; }
 
+/* Produits retirés & sauvegardes */
+.retired { margin-top: 18px; background: #f4f7f1; border: 1px solid var(--line); border-radius: 16px; padding: 4px 16px 8px; }
+.retired summary { cursor: pointer; font-weight: 700; font-family: var(--display); font-size: 16px; padding: 12px 0; color: var(--court-ink); }
+.retired-row, .backup-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--line); }
+.retired-info { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; }
+.retired-info small { color: var(--muted); font-size: 13px; }
+.retired-row button, .backup-row button { margin: 0; }
+.panel-backup { background: #fff8e8; border-color: #f4dfa9; }
+.panel-backup .backup-row { border-top-color: #f0e1b8; }
+@media print { .retired { display: none !important; } }
+
     </style>
 <script>
 (function(A,d){typeof exports=="object"&&typeof module<"u"?d(exports):typeof define=="function"&&define.amd?define(["exports"],d):(A=typeof globalThis<"u"?globalThis:A||self,d(A.WebWasmBarcodeReader={}))})(this,(function(A){"use strict";const d="barcode-scanner-overlay-styles",b="rgba(0, 0, 0, 0.55)",y="#00ff88",g="#00ff88";function E(){if(document.getElementById(d))return;const h=document.createElement("style");h.id=d,h.textContent=`
@@ -920,6 +931,11 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
             </table>
             <input type="file" id="inputPhotoProduitExistant" accept="image/*" capture="environment" style="display:none" onchange="onPhotoProduitExistantSelectionnee(event)">
         </div>
+        <details id="produitsRetiresWrap" class="retired no-print" style="display:none;">
+            <summary>📦 Produits retirés du catalogue (<span id="produitsRetiresCount">0</span>)</summary>
+            <p class="panel-hint">Ils n'apparaissent plus dans les ventes, achats et stock, mais leur historique est conservé et le bilan reste juste.</p>
+            <div id="produitsRetires"></div>
+        </details>
     </div>
 
     <!-- Section Bilan -->
@@ -1031,6 +1047,13 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
             <input type="file" id="importFile" accept=".json" style="display:none" onchange="importerDonnees(event)">
             <span id="loginPanelMsg" style="font-size:12px;color:#e74c3c;"></span>
         </div>
+        <div class="panel panel-backup">
+            <div class="panel-head"><h3>🛟 Sauvegardes de sécurité</h3></div>
+            <p class="panel-hint">Une copie est créée automatiquement chaque jour, à la première ouverture de l'appli par un admin (les 14 dernières sont gardées). Créez-en une à la main avant une manipulation risquée. « Restaurer » remplace les données actuelles par celles de la copie (après avoir copié l'état actuel). Les photos des produits ne sont pas incluses.</p>
+            <button class="btn-info" onclick="creerSauvegardeManuelle()">➕ Créer une sauvegarde maintenant</button>
+            <div id="backupMsg" class="msg-ok"></div>
+            <div id="listeBackups"><p class="panel-hint">Chargement...</p></div>
+        </div>
         <div class="panel panel-visitor">
             <div class="panel-head">
                 <h3>👁️ Accès visiteurs</h3>
@@ -1048,6 +1071,17 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
                 <span class="switch-knob"></span><span class="switch-label">Fermé</span>
             </button>
             <div id="visiteurMsg" class="msg-ok"></div>
+        </div>
+        <div class="panel">
+            <h3>➕ Ajouter un vendeur (email + mot de passe)</h3>
+            <p class="panel-hint">Crée le compte et l'autorise en une fois. Le vendeur n'a accès qu'à la page Ventes.</p>
+            <div class="user-form">
+                <div class="form-group"><label for="newUserEmail">Email</label><input id="newUserEmail" type="email" placeholder="prenom@email.com" autocomplete="off"></div>
+                <div class="form-group"><label for="newUserPassword">Mot de passe</label><input id="newUserPassword" type="password" placeholder="Min. 6 caractères" autocomplete="new-password"></div>
+                <div class="form-group"><label for="newUserName">Nom (optionnel)</label><input id="newUserName" type="text" placeholder="Jean Dupont"></div>
+                <button onclick="addUser()" class="btn-success">✅ Ajouter</button>
+            </div>
+            <div id="addUserMsg"></div>
         </div>
         <div class="panel panel-google">
             <h3>🔵 Demandes d'accès (comptes Google)</h3>
@@ -1187,6 +1221,7 @@ async function startRealtimeSync() {
                 afficherToutesLesDonnees();
                 mettreAJourSelects();
                 mettreAJourStatutSauvegarde({ message: '✓ Synchronisé', classe: '' });
+                if (isAdmin && !window.__autoBackupDone) { window.__autoBackupDone = true; sauvegardeSecuriteAuto(); }
             }
         }, (e) => console.error("Erreur sync:", e));
     } catch(e) { console.error("Erreur sync:", e); }
@@ -1492,7 +1527,8 @@ function ajouterBoisson() {
     const codeBarre = codeBarreInput ? (codeBarreInput.value.trim() || null) : null;
     if (!nom || !prix || prix <= 0) { alert('❌ Veuillez remplir tous les champs'); return; }
     if (codeBarre && data.boissons.some(b => b.codeBarre === codeBarre)) {
-        alert('❌ Ce code-barre est déjà associé à un autre produit'); return;
+        const deja = data.boissons.find(b => b.codeBarre === codeBarre);
+        alert(deja && deja.archive ? "❌ Ce code-barre appartient à « " + deja.nom + " », retiré du catalogue. Remettez-le depuis « Produits retirés »." : '❌ Ce code-barre est déjà associé à un autre produit'); return;
     }
     data.boissons.push({ id: Date.now(), nom, type, prix, unite, codeBarre, photoUrl: scanPhotoUrlTemp || null, stockInitial: 0, dateAjout: new Date().toISOString() });
     document.getElementById('boissonNom').value = ''; document.getElementById('boissonPrix').value = '';
@@ -1573,7 +1609,7 @@ async function onPhotoProduitExistantSelectionnee(event) {
 }
 function afficherBoissons() {
     const tbody = document.getElementById('tbodyBoissons'); tbody.innerHTML = '';
-    data.boissons.forEach(b => {
+    data.boissons.filter(b => !b.archive).forEach(b => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
@@ -1637,20 +1673,10 @@ function sauvegarderModificationBoisson(id) {
     if (b) { b.nom = nom; b.type = type; b.prix = prix; b.unite = unite; b.codeBarre = codeBarre; }
     afficherBoissons(); mettreAJourSelects(); debounceSauvegarde();
 }
-function supprimerBoisson(id) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
-    data.boissons = data.boissons.filter(b => b.id !== id);
-    data.achats = data.achats.filter(a => a.boissonId !== id);
-    data.ventes = data.ventes.filter(v => v.boissonId !== id);
-    data.offerts = data.offerts.filter(o => o.boissonId !== id);
-    afficherBoissons(); afficherAchats(); afficherVentes(); afficherOfferts(); afficherStock();
-    mettreAJourSelects(); debounceSauvegarde(); alert('🗑️ Produit supprimé !');
-}
-
 // ===== STOCK =====
 function calculerStock() {
     const stock = {};
-    data.boissons.forEach(b => { stock[b.id] = { nom:b.nom, type:b.type, unite:b.unite, prix:b.prix, photoUrl:b.photoUrl||null, stockInitial:(b.stockInitial||0), achatTotal:0, venteTotal:0, offertTotal:0, stockRestant:0 }; });
+    data.boissons.filter(b => !b.archive).forEach(b => { stock[b.id] = { nom:b.nom, type:b.type, unite:b.unite, prix:b.prix, photoUrl:b.photoUrl||null, stockInitial:(b.stockInitial||0), achatTotal:0, venteTotal:0, offertTotal:0, stockRestant:0 }; });
     data.achats.forEach(a => { if(stock[a.boissonId]) stock[a.boissonId].achatTotal += a.quantite; });
     data.ventes.forEach(v => { if(stock[v.boissonId]) stock[v.boissonId].venteTotal += v.quantite; });
     data.offerts.forEach(o => { if(stock[o.boissonId]) stock[o.boissonId].offertTotal += o.quantite; });
@@ -1831,7 +1857,11 @@ async function onCodeScanne(code) {
         return;
     }
     if (scannerContext === 'achat') {
-        const produit = data.boissons.find(b => b.codeBarre && b.codeBarre === code);
+        let produit = data.boissons.find(b => b.codeBarre && b.codeBarre === code);
+        if (produit && produit.archive) {
+            if (confirm('« ' + produit.nom + ' » avait été retiré du catalogue. Le remettre ?')) { produit.archive = false; delete produit.archiveLe; afficherBoissons(); afficherProduitsRetires(); afficherStock(); mettreAJourSelects(); debounceSauvegarde(); }
+            else { produit = null; }
+        }
         if (produit) {
             document.getElementById('achatBoisson').value = produit.id;
             if (statusEl) statusEl.textContent = '✅ ' + produit.nom + ' sélectionné';
@@ -1848,7 +1878,7 @@ async function onCodeScanne(code) {
             const zone = document.getElementById('scannerAssignZone');
             document.getElementById('scannerCodeInconnu').textContent = code;
             const sel = document.getElementById('scannerAssignSelect'); sel.innerHTML = '';
-            data.boissons.forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.nom; sel.appendChild(o); });
+            data.boissons.filter(b => !b.archive).forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.nom; sel.appendChild(o); });
             const suggestion = document.getElementById('scannerNouveauProduitZone');
             if (info) {
                 document.getElementById('scannerNouveauProduitNom').textContent = info.nom;
@@ -1922,7 +1952,7 @@ function changerSection(sectionId) {
         achats: afficherAchats, boissons: afficherBoissons, apports: afficherApports,
         remboursements: afficherRemboursements, offertes: afficherOfferts,
         archives: chargerArchives,
-        utilisateurs: () => { if(isAdmin) { loadUsersList(); chargerDemandesAcces(); } }
+        utilisateurs: () => { if(isAdmin) { loadUsersList(); chargerDemandesAcces(); chargerSauvegardes(); } }
     };
     if(map[sectionId]) map[sectionId]();
 }
@@ -2289,13 +2319,13 @@ function afficherDetailsContributeurs() {
 function mettreAJourSelects() {
     ['achatBoisson','venteBoisson','offertBoisson'].forEach(id => {
         const sel = document.getElementById(id); sel.innerHTML = '';
-        data.boissons.forEach(b => { const o = document.createElement('option'); o.value=b.id; o.textContent=`${b.nom} (${b.prix.toFixed(2)}€)`; sel.appendChild(o); });
+        data.boissons.filter(b => !b.archive).forEach(b => { const o = document.createElement('option'); o.value=b.id; o.textContent=`${b.nom} (${b.prix.toFixed(2)}€)`; sel.appendChild(o); });
     });
     const selR = document.getElementById('remboursementContributeur'); selR.innerHTML = '';
     [...new Set(data.apports.map(a => a.nom))].forEach(nom => { selR.innerHTML += `<option value="${nom}">${nom}</option>`; });
 }
 function afficherToutesLesDonnees() {
-    afficherApports(); afficherBoissons(); afficherAchats(); afficherVentes();
+    afficherApports(); afficherBoissons(); afficherProduitsRetires(); afficherAchats(); afficherVentes();
     afficherRemboursements(); afficherOfferts(); afficherStock(); calculerBilan(); mettreAJourIndicateursTri();
 }
 
@@ -2546,6 +2576,135 @@ function quitterVisiteur(ferme) {
     if (ferme) alert("L'accès visiteur est maintenant fermé.");
 }
 
+// ===== PRODUITS RETIRÉS (l'historique est conservé) =====
+function compterHistoriqueProduit(id) {
+    return { achats: data.achats.filter(a => a.boissonId === id).length, ventes: data.ventes.filter(v => v.boissonId === id).length, offerts: data.offerts.filter(o => o.boissonId === id).length };
+}
+function resumeHistorique(h) { return h.ventes + ' vente(s), ' + h.achats + ' achat(s), ' + h.offerts + ' offert(s)'; }
+function supprimerBoisson(id) {
+    // "Supprimer" = retirer du catalogue : le produit disparaît des tuiles, du stock et des listes de choix,
+    // mais ses ventes / achats / offerts restent dans l'historique (le bilan ne change pas).
+    const b = data.boissons.find(x => x.id === id); if (!b) return;
+    const h = compterHistoriqueProduit(id), n = h.achats + h.ventes + h.offerts;
+    if (!confirm('Retirer « ' + b.nom + ' » du catalogue ?\n\nIl disparaît des tuiles, du stock et des listes de choix.\n' + (n ? 'Son historique (' + resumeHistorique(h) + ') est CONSERVÉ : le bilan ne change pas.\n' : '') + '\nVous pourrez le remettre depuis « Produits retirés » (en bas de la page Produits).')) return;
+    b.archive = true; b.archiveLe = new Date().toISOString();
+    afficherBoissons(); afficherProduitsRetires(); afficherStock(); mettreAJourSelects(); debounceSauvegarde();
+    alert('📦 « ' + b.nom + ' » retiré du catalogue. Son historique est conservé.');
+}
+function restaurerProduit(id) {
+    const b = data.boissons.find(x => x.id === id); if (!b) return;
+    b.archive = false; delete b.archiveLe;
+    afficherBoissons(); afficherProduitsRetires(); afficherStock(); mettreAJourSelects(); debounceSauvegarde();
+}
+function supprimerProduitDefinitivement(id) {
+    const b = data.boissons.find(x => x.id === id); if (!b) return;
+    const h = compterHistoriqueProduit(id), n = h.achats + h.ventes + h.offerts;
+    if (!confirm('⚠️ SUPPRIMER DÉFINITIVEMENT « ' + b.nom + ' » ?\n\n' + (n ? 'Cela efface aussi ' + resumeHistorique(h) + ' de ce produit : le bilan sera modifié.\n\n' : '') + 'Cette action est irréversible.')) return;
+    if (n && !confirm("Dernière confirmation : effacer aussi l'historique de « " + b.nom + ' » ?')) return;
+    data.boissons = data.boissons.filter(x => x.id !== id);
+    data.achats = data.achats.filter(a => a.boissonId !== id);
+    data.ventes = data.ventes.filter(v => v.boissonId !== id);
+    data.offerts = data.offerts.filter(o => o.boissonId !== id);
+    afficherToutesLesDonnees(); mettreAJourSelects(); debounceSauvegarde();
+}
+function afficherProduitsRetires() {
+    const box = document.getElementById('produitsRetires'), wrap = document.getElementById('produitsRetiresWrap');
+    if (!box || !wrap) return;
+    const list = data.boissons.filter(b => b.archive);
+    wrap.style.display = list.length ? '' : 'none';
+    const cnt = document.getElementById('produitsRetiresCount'); if (cnt) cnt.textContent = list.length;
+    box.innerHTML = '';
+    list.forEach(b => {
+        const h = compterHistoriqueProduit(b.id);
+        const row = document.createElement('div'); row.className = 'retired-row';
+        const info = document.createElement('div'); info.className = 'retired-info';
+        const nom = document.createElement('b'); nom.textContent = b.nom;
+        const sub = document.createElement('small');
+        sub.textContent = (b.prix != null ? Number(b.prix).toFixed(2) + ' € · ' : '') + resumeHistorique(h) + (b.archiveLe ? ' · retiré le ' + new Date(b.archiveLe).toLocaleDateString('fr-FR') : '');
+        info.appendChild(nom); info.appendChild(sub);
+        const bt1 = document.createElement('button'); bt1.type = 'button'; bt1.className = 'btn-success btn-small'; bt1.textContent = 'Remettre';
+        bt1.addEventListener('click', () => restaurerProduit(b.id));
+        const bt2 = document.createElement('button'); bt2.type = 'button'; bt2.className = 'btn-danger btn-small'; bt2.textContent = 'Supprimer'; bt2.title = 'Supprimer définitivement';
+        bt2.addEventListener('click', () => supprimerProduitDefinitivement(b.id));
+        row.appendChild(info); row.appendChild(bt1); row.appendChild(bt2); box.appendChild(row);
+    });
+}
+
+// ===== SAUVEGARDES DE SÉCURITÉ (copies cloud, restaurables) =====
+function jsonPourSauvegarde() {
+    const copie = JSON.parse(JSON.stringify(data));
+    (copie.boissons || []).forEach(b => { delete b.photoUrl; });   // les photos alourdiraient trop les copies
+    return JSON.stringify(copie);
+}
+async function creerSauvegardeSecurite(etiquette, idForce) {
+    if (!isAdmin) return false;
+    const id = idForce || ('manuel_' + new Date().toISOString().replace(/[:.]/g, '-'));
+    await setDoc(doc(db, 'buvetteBackups', id), {
+        createdAt: new Date().toISOString(), label: etiquette,
+        resume: { produits: data.boissons.length, ventes: data.ventes.length, achats: data.achats.length, offerts: data.offerts.length, apports: data.apports.length, remboursements: data.remboursements.length },
+        json: jsonPourSauvegarde()
+    });
+    return true;
+}
+async function sauvegardeSecuriteAuto() {
+    if (!isAdmin) return;
+    if (!(data.ventes.length || data.achats.length || data.apports.length || data.boissons.length)) return;   // jamais de copie "vide"
+    const id = 'auto_' + new Date().toISOString().slice(0, 10);
+    try {
+        if ((await getDoc(doc(db, 'buvetteBackups', id))).exists()) return;
+        await creerSauvegardeSecurite('Automatique (première ouverture du jour)', id);
+        const snap = await getDocs(collection(db, 'buvetteBackups'));
+        const autos = snap.docs.map(d => d.id).filter(i => i.startsWith('auto_')).sort();
+        for (const vieux of autos.slice(0, Math.max(0, autos.length - 14))) { await deleteDoc(doc(db, 'buvetteBackups', vieux)); }
+    } catch (e) { console.warn('Sauvegarde automatique impossible :', e.code || e.message); }
+}
+async function creerSauvegardeManuelle() {
+    if (!isAdmin) return;
+    const msg = document.getElementById('backupMsg');
+    try {
+        await creerSauvegardeSecurite('Manuelle');
+        if (msg) { msg.textContent = '✓ Sauvegarde créée.'; setTimeout(() => { msg.textContent = ''; }, 4000); }
+        chargerSauvegardes();
+    } catch (e) { alert('❌ Sauvegarde impossible : ' + (e.code || e.message)); }
+}
+function libelleResume(r) { r = r || {}; return (r.ventes || 0) + ' ventes · ' + (r.achats || 0) + ' achats · ' + (r.offerts || 0) + ' offerts · ' + (r.produits || 0) + ' produits'; }
+async function chargerSauvegardes() {
+    const el = document.getElementById('listeBackups'); if (!el || !isAdmin) return;
+    try {
+        const snap = await getDocs(collection(db, 'buvetteBackups'));
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 20);
+        el.innerHTML = '';
+        if (!items.length) { const p = document.createElement('p'); p.className = 'panel-hint'; p.textContent = 'Aucune sauvegarde pour le moment (la première sera créée à la prochaine ouverture par un admin).'; el.appendChild(p); return; }
+        items.forEach(it => {
+            const row = document.createElement('div'); row.className = 'backup-row';
+            const info = document.createElement('div'); info.className = 'retired-info';
+            const t = document.createElement('b'); t.textContent = new Date(it.createdAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+            const s = document.createElement('small'); s.textContent = (it.label || '') + ' — ' + libelleResume(it.resume);
+            info.appendChild(t); info.appendChild(s);
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-warning btn-small'; b.textContent = 'Restaurer';
+            b.addEventListener('click', () => restaurerSauvegarde(it.id));
+            row.appendChild(info); row.appendChild(b); el.appendChild(row);
+        });
+    } catch (e) { el.innerHTML = '<p class="panel-hint" style="color:#e74c3c;">Erreur de chargement (' + (e.code || e.message) + ')</p>'; }
+}
+async function restaurerSauvegarde(id) {
+    if (!isAdmin) return;
+    try {
+        const snap = await getDoc(doc(db, 'buvetteBackups', id)); if (!snap.exists()) return;
+        const b = snap.data(), quand = new Date(b.createdAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+        if (!confirm('Restaurer la sauvegarde du ' + quand + ' ?\n\n' + libelleResume(b.resume) + "\n\nLes données ACTUELLES seront remplacées (une copie de l'état actuel est créée d'abord).")) return;
+        let restauration; try { restauration = JSON.parse(b.json); } catch (e) { alert('❌ Cette sauvegarde est illisible.'); return; }
+        try { await creerSauvegardeSecurite('Avant restauration du ' + quand); }
+        catch (e) { if (!confirm("Impossible de sauvegarder l'état actuel. Restaurer quand même ?")) return; }
+        const photos = {}; data.boissons.forEach(x => { if (x.photoUrl) photos[x.id] = x.photoUrl; });
+        (restauration.boissons || []).forEach(x => { if (photos[x.id] && !x.photoUrl) x.photoUrl = photos[x.id]; });
+        data = { apports: [], boissons: [], achats: [], ventes: [], remboursements: [], offerts: [], ...restauration };
+        afficherToutesLesDonnees(); mettreAJourSelects(); debounceSauvegarde();
+        alert('✅ Sauvegarde du ' + quand + ' restaurée.');
+        chargerSauvegardes();
+    } catch (e) { alert('❌ Erreur : ' + (e.code || e.message)); }
+}
+
 // ===== DEMANDES D'ACCÈS (vendeurs Google) =====
 async function chargerDemandesAcces() {
     const el = document.getElementById('demandesAcces'); if (!el || !isAdmin) return;
@@ -2591,7 +2750,7 @@ async function updateUIForUser(user) {
     if (user) {
         // ── Utilisateur Firebase connecté ──────────────────────────────
         currentUser = user; isVisitor = false;
-        const adminEmails = ["bracket.organizer@gmail.com","quinquin44@gmail.com","checheux@gmail.com"];
+        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","checheux@gmail.com"];
         isAdmin = adminEmails.map(normaliserEmail).includes(normaliserEmail(user.email));
 
         if (isAdmin) {
@@ -2808,22 +2967,13 @@ Object.assign(window, {
     declencherPhotoNouveauProduit, onPhotoNouveauProduitSelectionnee, declencherChangementPhoto, onPhotoProduitExistantSelectionnee, masquerPhotoPreview, toggleAchatGratuit,
     ouvrirInventaireModal, fermerInventaireModal, validerInventaireEtNouvelleSaison,
     getBarData: () => data, calculerStock, emojiProduit, chargerDemandesAcces, autoriserDemande, refuserDemande,
-    entrerVisiteur, basculerAccesVisiteurs, chargerAccesVisiteurs, choisirDureeVisiteur
+    entrerVisiteur, basculerAccesVisiteurs, chargerAccesVisiteurs, choisirDureeVisiteur,
+    creerSauvegardeManuelle, chargerSauvegardes
 });
 
 // Sélectionne automatiquement le contenu des champs texte/nombre au focus,
 // pour pouvoir retaper directement une valeur sans devoir l'effacer à la main
-// (fonctionne au clavier comme au tactile, y compris sur les lignes ajoutées dynamiquement).
-document.addEventListener('focus', function(e) {
-    const el = e.target;
-    if (el && el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number') && !el.readOnly && !el.disabled) {
-        setTimeout(() => { try { el.select(); } catch(err) {} }, 0);
-    }
-}, true);
-
-document.addEventListener('DOMContentLoaded', initialiser);
-</script>
-<script>
+// (fonctionne au clavier com<script>
 /* Habillage mobile / navigation — n'interfère pas avec la logique de l'appli */
 (function () {
     var ICONS = { ventes:'fa-cash-register', offertes:'fa-gift', stock:'fa-boxes-stacked', achats:'fa-basket-shopping',
@@ -3160,7 +3310,7 @@ document.addEventListener('DOMContentLoaded', initialiser);
     var lastSig = '';
     function sig() {
         var d = window.getBarData(), s = function (a) { return (a || []).reduce(function (t, x) { return t + (x.quantite || 0); }, 0); };
-        return JSON.stringify([(d.boissons || []).map(function (b) { return [b.id, b.nom, b.prix, b.type, b.photoUrl ? b.photoUrl.length : 0, b.stockInitial || 0]; }),
+        return JSON.stringify([(d.boissons || []).map(function (b) { return [b.id, b.nom, b.prix, b.type, b.photoUrl ? b.photoUrl.length : 0, b.stockInitial || 0, b.archive ? 1 : 0]; }),
             (d.achats || []).length, (d.ventes || []).length, (d.offerts || []).length, s(d.achats), s(d.ventes), s(d.offerts)]);
     }
     setInterval(function () {
@@ -3176,5 +3326,15 @@ document.addEventListener('DOMContentLoaded', initialiser);
 })();
 </script>
 
+me au tactile, y compris sur les lignes ajoutées dynamiquement).
+document.addEventListener('focus', function(e) {
+    const el = e.target;
+    if (el && el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number') && !el.readOnly && !el.disabled) {
+        setTimeout(() => { try { el.select(); } catch(err) {} }, 0);
+    }
+}, true);
+
+document.addEventListener('DOMContentLoaded', initialiser);
+</script>
 </body>
 </html>
