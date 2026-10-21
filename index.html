@@ -341,6 +341,37 @@ body.no-tabs .nav-bar { padding-bottom: 10px; }
 #loginPanel, #loginPanel * { pointer-events: auto !important; opacity: 1 !important; }
 .modal, .modal * { pointer-events: auto !important; opacity: 1 !important; }
 
+/* ---------- Cases à cocher ---------- */
+input[type=checkbox] { width: 22px !important; min-height: 22px; height: 22px; padding: 0; accent-color: var(--court); flex: none; }
+label:has(> input[type=checkbox]) { color: var(--muted); }
+
+/* Bouton secondaire de la page Stock */
+#btnOuvrirInventaire { background: var(--court) !important; color: #fff !important; box-shadow: none !important; font-family: var(--body) !important; font-size: 15px !important; min-height: 48px !important; margin: 4px 0 10px !important; }
+
+/* ---------- Scan code-barre ---------- */
+.field-with-scan { display: flex; gap: 8px; align-items: stretch; }
+.field-with-scan select, .field-with-scan input { flex: 1; min-width: 0; }
+.btn-scan { background: var(--court); color: #fff; border: none; border-radius: 12px; width: auto; min-width: 54px; flex-shrink: 0; padding: 0 18px; font-size: 20px; min-height: 48px; margin: 0; box-shadow: 0 3px 0 var(--court-deep); }
+.btn-scan:active { background: var(--court-deep); transform: translateY(2px); box-shadow: 0 1px 0 var(--court-deep); }
+.btn-scan.btn-danger { background: var(--danger); box-shadow: 0 3px 0 #a8342a; }
+.btn-scan.btn-danger:active { background: #b53a2f; }
+#scannerAssignZone { background: #fff8e8; border: 1px solid #f4dfa9; border-radius: 14px; padding: 14px; }
+#scannerAssignZone select { margin-top: 4px; }
+#scannerManuelInput { min-height: 48px; border-radius: 12px !important; border: 1.5px solid var(--line) !important; background: #f6f8f4; }
+#scannerZone { border-radius: 16px !important; }
+#scannerStatus { color: var(--muted) !important; }
+
+/* ---------- Inventaire & archives ---------- */
+.inv-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; background: #f9fbf7; }
+.inv-row input { width: 96px; padding: 8px; border-radius: 10px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 18px; }
+#listeArchives { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; margin-top: 12px; }
+#listeArchives .stock-card strong { font-family: var(--display); font-size: 17px; color: var(--court-ink); }
+.icon-btn.btn-small { width: auto; border-radius: 12px; padding: 0 14px; min-height: 42px; font-size: 15px; font-weight: 700; gap: 6px; }
+#archiveDetailGrid { margin: 10px 0; }
+#archiveDetailGrid .summary-card { padding: 12px 12px 10px 16px; }
+#archiveDetailGrid .summary-card p { font-size: 20px; }
+.panel-google { background: #eef4fb; border-color: #cfe0f3; }
+
 /* ============================================================
    MOBILE
    ============================================================ */
@@ -641,6 +672,18 @@ body.sheet-open { overflow: hidden; }
 .panel-backup .backup-row { border-top-color: #f0e1b8; }
 @media print { .retired { display: none !important; } }
 
+/* Photo produit : appareil photo / galerie */
+.photo-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.photo-actions .btn-scan { flex: 1 1 140px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; font-size: 14px; padding: 0 12px; }
+.btn-scan.alt { background: #eaf1e5; color: var(--court-deep); box-shadow: 0 3px 0 #c9d8c2; }
+.btn-scan.alt:active { background: #dbe8d4; box-shadow: 0 1px 0 #c9d8c2; }
+.sheet-title { margin: 2px 4px 12px; font-size: 18px; }
+.photo-opt { display: flex; align-items: center; justify-content: flex-start; gap: 14px; width: 100%; min-height: 60px; margin: 0 0 8px; padding: 0 18px; background: #f4f7f1; color: var(--court-ink); border: 1.5px solid var(--line); border-radius: 14px; font-size: 17px; font-weight: 700; box-shadow: none; text-align: left; }
+.photo-opt:hover { background: #e9f1e4; filter: none; }
+.photo-opt.danger { color: var(--danger); }
+.photo-ico { font-size: 24px; width: 30px; text-align: center; }
+.sheet > .sheet-close { width: 100%; min-height: 50px; margin: 2px 0 0; }
+
     </style>
 <script>
 (function(A,d){typeof exports=="object"&&typeof module<"u"?d(exports):typeof define=="function"&&define.amd?define(["exports"],d):(A=typeof globalThis<"u"?globalThis:A||self,d(A.WebWasmBarcodeReader={}))})(this,(function(A){"use strict";const d="barcode-scanner-overlay-styles",b="rgba(0, 0, 0, 0.55)",y="#00ff88",g="#00ff88";function E(){if(document.getElementById(d))return;const h=document.createElement("style");h.id=d,h.textContent=`
@@ -911,7 +954,11 @@ var Module=typeof Module!="undefined"?Module:{};var ENVIRONMENT_IS_WEB=!!globalT
                 <input type="text" id="boissonCodeBarre" placeholder="Scannez ou saisissez le code" inputmode="numeric">
                 <button type="button" class="btn-scan no-print" title="Scanner un code-barre" onclick="ouvrirScanner('boisson')"><i class="fas fa-barcode"></i></button>
             </div>
-            <button type="button" class="btn-scan no-print" style="width:100%;font-size:14px;margin-top:8px;" onclick="declencherPhotoNouveauProduit()"><i class="fas fa-camera"></i> Prendre une photo du produit</button>
+            <div class="photo-actions no-print">
+                <button type="button" class="btn-scan" onclick="declencherPhotoNouveauProduit()"><i class="fas fa-camera"></i> Appareil photo</button>
+                <button type="button" class="btn-scan alt" onclick="document.getElementById('inputGalerieNouveauProduit').click()"><i class="fas fa-images"></i> Galerie</button>
+            </div>
+            <input type="file" id="inputGalerieNouveauProduit" accept="image/*" style="display:none" onchange="onPhotoNouveauProduitSelectionnee(event)">
             <input type="file" id="inputPhotoNouveauProduit" accept="image/*" capture="environment" style="display:none" onchange="onPhotoNouveauProduitSelectionnee(event)">
             <div id="boissonPhotoPreview" style="display:none;align-items:center;gap:8px;margin-top:8px;">
                 <img id="boissonPhotoImg" src="" alt="" style="width:84px;height:84px;object-fit:contain;background:#f4f1e8;border-radius:8px;border:1px solid #ddd;flex-shrink:0;">
@@ -1594,7 +1641,23 @@ async function onPhotoNouveauProduitSelectionnee(event) {
 let photoEditBoissonId = null;
 function declencherChangementPhoto(id) {
     photoEditBoissonId = id;
-    document.getElementById('inputPhotoProduitExistant').click();
+    const b = data.boissons.find(x => x.id === id);
+    const sheet = document.getElementById('photoChoix');
+    if (!sheet) { document.getElementById('inputPhotoProduitExistant').click(); return; }
+    const t = document.getElementById('photoChoixTitre'); if (t) t.textContent = b ? 'Photo — ' + b.nom : 'Photo du produit';
+    const r = document.getElementById('photoChoixRetirer'); if (r) r.style.display = (b && b.photoUrl) ? '' : 'none';
+    sheet.hidden = false;
+}
+function fermerChoixPhoto() { const s = document.getElementById('photoChoix'); if (s) s.hidden = true; }
+function choisirPhoto(mode) {
+    fermerChoixPhoto();
+    if (mode === 'camera') document.getElementById('inputPhotoProduitExistant').click();
+    else if (mode === 'galerie') document.getElementById('inputGalerieProduitExistant').click();
+    else if (mode === 'retirer') {
+        const b = data.boissons.find(x => x.id === photoEditBoissonId);
+        if (b) { delete b.photoUrl; afficherBoissons(); afficherStock(); debounceSauvegarde(); }
+        photoEditBoissonId = null;
+    }
 }
 async function onPhotoProduitExistantSelectionnee(event) {
     const file = event.target.files && event.target.files[0];
@@ -2968,7 +3031,8 @@ Object.assign(window, {
     ouvrirInventaireModal, fermerInventaireModal, validerInventaireEtNouvelleSaison,
     getBarData: () => data, calculerStock, emojiProduit, chargerDemandesAcces, autoriserDemande, refuserDemande,
     entrerVisiteur, basculerAccesVisiteurs, chargerAccesVisiteurs, choisirDureeVisiteur,
-    creerSauvegardeManuelle, chargerSauvegardes
+    creerSauvegardeManuelle, chargerSauvegardes,
+    fermerChoixPhoto, choisirPhoto
 });
 
 // Sélectionne automatiquement le contenu des champs texte/nombre au focus,
@@ -2983,6 +3047,18 @@ document.addEventListener('focus', function(e) {
 
 document.addEventListener('DOMContentLoaded', initialiser);
 </script>
+<!-- Choix de la photo d'un produit existant : appareil photo / galerie / retirer -->
+<div id="photoChoix" class="sheet-backdrop no-print" hidden onclick="if(event.target===this) fermerChoixPhoto()">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Photo du produit">
+        <h3 id="photoChoixTitre" class="sheet-title">Photo du produit</h3>
+        <button type="button" class="photo-opt" onclick="choisirPhoto('camera')"><span class="photo-ico">📷</span> Prendre une photo</button>
+        <button type="button" class="photo-opt" onclick="choisirPhoto('galerie')"><span class="photo-ico">🖼️</span> Choisir dans la galerie</button>
+        <button type="button" class="photo-opt danger" id="photoChoixRetirer" onclick="choisirPhoto('retirer')"><span class="photo-ico">🗑️</span> Retirer la photo</button>
+        <button type="button" class="sheet-close" onclick="fermerChoixPhoto()">Annuler</button>
+        <input type="file" id="inputGalerieProduitExistant" accept="image/*" style="display:none" onchange="onPhotoProduitExistantSelectionnee(event)">
+    </div>
+</div>
+
 <script>
 /* Habillage mobile / navigation — n'interfère pas avec la logique de l'appli */
 (function () {
