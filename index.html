@@ -684,6 +684,12 @@ body.sheet-open { overflow: hidden; }
 .photo-ico { font-size: 24px; width: 30px; text-align: center; }
 .sheet > .sheet-close { width: 100%; min-height: 50px; margin: 2px 0 0; }
 
+/* Produit épuisé : tuile non touchable */
+.tile:disabled { cursor: not-allowed; background: #f3f5f1; border-color: #e3e8df; box-shadow: none; }
+.tile:disabled:active { transform: none; }
+.tile:disabled .tile-name, .tile:disabled .tile-price { color: #8a978f; }
+.readonly-mode .tile:disabled { opacity: 1; }
+
     </style>
 <script>
 (function(A,d){typeof exports=="object"&&typeof module<"u"?d(exports):typeof define=="function"&&define.amd?define(["exports"],d):(A=typeof globalThis<"u"?globalThis:A||self,d(A.WebWasmBarcodeReader={}))})(this,(function(A){"use strict";const d="barcode-scanner-overlay-styles",b="rgba(0, 0, 0, 0.55)",y="#00ff88",g="#00ff88";function E(){if(document.getElementById(d))return;const h=document.createElement("style");h.id=d,h.textContent=`
@@ -2025,6 +2031,13 @@ function updateUsersTab() {
 }
 
 // ===== VENTES =====
+function verifierStock(boissonId, quantite, nom, verbe) {
+    const st = calculerStock()[boissonId];
+    if (!st) { alert('⛔ « ' + nom + " » n'est plus au catalogue : impossible de " + verbe + '.'); return false; }
+    if (st.stockRestant <= 0) { alert('⛔ « ' + nom + ' » est épuisé : impossible de ' + verbe + ".\n\nSi du stock est arrivé, enregistrez d'abord l'achat (page Achats)."); return false; }
+    if (quantite > st.stockRestant) { alert('⛔ Stock insuffisant pour « ' + nom + ' » : il n\'en reste que ' + st.stockRestant + '.'); return false; }
+    return true;
+}
 function ajouterVente() {
     const boissonId = parseInt(document.getElementById('venteBoisson').value);
     const quantite = parseInt(document.getElementById('venteQuantite').value);
@@ -2032,6 +2045,7 @@ function ajouterVente() {
     if (!boissonId || !quantite || quantite <= 0 || !date) { alert('❌ Veuillez remplir tous les champs'); return; }
     const b = data.boissons.find(x => x.id === boissonId);
     if (!b) { alert('❌ Produit non trouvé'); return; }
+    if (!verifierStock(boissonId, quantite, b.nom, 'le vendre')) return;
     data.ventes.push({ id: Date.now(), boissonId, boissonNom: b.nom, quantite, prixUnitaire: b.prix, total: quantite * b.prix, date });
     trierDonneesParDate(); document.getElementById('venteQuantite').value = '';
     afficherVentes(); debounceSauvegarde();
@@ -2069,6 +2083,7 @@ function sauvegarderModificationVente(id) {
     const quantite = parseInt(document.getElementById(`edit-vente-quantite-${id}`).value);
     if (!date || !quantite || quantite <= 0) { alert('❌ Veuillez corriger les erreurs'); return; }
     const v = data.ventes.find(x => x.id === id);
+    if (v && quantite > v.quantite && !verifierStock(v.boissonId, quantite - v.quantite, v.boissonNom, 'augmenter cette vente')) return;
     if (v) { v.date = date; v.quantite = quantite; v.total = quantite * v.prixUnitaire; }
     trierDonneesParDate(); afficherVentes(); debounceSauvegarde();
 }
@@ -2282,6 +2297,7 @@ function ajouterOffert() {
     if (!boissonId || !quantite || quantite<=0 || !motif || !date) { alert('❌ Veuillez remplir tous les champs'); return; }
     const b = data.boissons.find(x => x.id === boissonId);
     if (!b) { alert('❌ Produit non trouvé'); return; }
+    if (!verifierStock(boissonId, quantite, b.nom, "l'offrir")) return;
     data.offerts.push({ id: Date.now(), boissonId, boissonNom: b.nom, quantite, valeurVente: quantite*b.prix, motif, date });
     trierDonneesParDate();
     document.getElementById('offertQuantite').value = ''; document.getElementById('offertMotif').value = '';
@@ -2330,6 +2346,7 @@ function sauvegarderModificationOffert(id) {
     const motif = document.getElementById(`edit-offert-motif-${id}`).value.trim();
     if (!date || !quantite || quantite<=0 || !motif) { alert('❌ Veuillez corriger les erreurs'); return; }
     const o = data.offerts.find(x => x.id === id);
+    if (o && quantite > o.quantite && !verifierStock(o.boissonId, quantite - o.quantite, o.boissonNom, 'augmenter cet offert')) return;
     if (o) { o.date = date; o.quantite = quantite; o.motif = motif; o.valeurVente = quantite * (data.boissons.find(b=>b.id===o.boissonId)?.prix || 0); }
     trierDonneesParDate(); afficherOfferts(); debounceSauvegarde();
 }
@@ -2813,7 +2830,7 @@ async function updateUIForUser(user) {
     if (user) {
         // ── Utilisateur Firebase connecté ──────────────────────────────
         currentUser = user; isVisitor = false;
-        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","bracket.organizer@gmail.com","checheux@gmail.com"];
+        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","bracket.organiser@gmail.com","checheux@gmail.com"];
         isAdmin = adminEmails.map(normaliserEmail).includes(normaliserEmail(user.email));
 
         if (isAdmin) {
@@ -3248,7 +3265,7 @@ document.addEventListener('DOMContentLoaded', initialiser);
             var q = norm(st.q);
             var items = list.filter(function (p) { return (st.type === 'all' || p.type === st.type) && (!q || norm(p.nom).indexOf(q) > -1); });
             grid.innerHTML = items.map(function (p) {
-                return '<button type="button" class="tile' + (p.stock <= 0 ? ' is-out' : '') + '" data-id="' + p.id + '" role="option" aria-selected="false">' +
+                return '<button type="button" class="tile' + (p.stock <= 0 ? ' is-out' : '') + '" data-id="' + p.id + '" role="option" aria-selected="false"' + (p.stock <= 0 ? ' disabled aria-disabled="true"' : '') + '>' +
                     '<span class="tile-img">' + visual(p) + '</span><span class="tile-name">' + esc(p.nom) + '</span>' +
                     '<span class="tile-price">' + eur(p.prix) + '</span>' + stockBadge(p) + '<span class="tile-qty" hidden></span></button>';
             }).join('');
@@ -3279,6 +3296,8 @@ document.addEventListener('DOMContentLoaded', initialiser);
             } else { bar.hidden = true; }
         }
         function applySelect() {
+            var sc = list.filter(function (p) { return p.id === st.id; })[0];
+            if (sc && sc.stock <= 0) { st.id = null; if (qty.value !== '') qty.value = ''; }
             if (st.id != null && list.some(function (p) { return p.id === st.id; })) { if (sel.value !== String(st.id)) sel.value = String(st.id); }
             else { st.id = null; if (sel.selectedIndex !== -1) sel.selectedIndex = -1; }
         }
@@ -3286,7 +3305,12 @@ document.addEventListener('DOMContentLoaded', initialiser);
         grid.addEventListener('click', function (e) {
             var t = e.target.closest('.tile'); if (!t) return;
             var id = Number(t.getAttribute('data-id'));
-            if (st.id === id) { qty.value = qtyVal() + 1; } else { st.id = id; qty.value = 1; }
+            var pr = list.filter(function (p) { return p.id === id; })[0];
+            if (!pr || pr.stock <= 0) return;
+            if (st.id === id) {
+                if (qtyVal() + 1 > pr.stock) { toast('Plus que ' + pr.stock + ' en stock'); return; }
+                qty.value = qtyVal() + 1;
+            } else { st.id = id; qty.value = 1; }
             sel.value = String(id); applySelect(); mark();
             if (navigator.vibrate) try { navigator.vibrate(8); } catch (x) {}
         });
@@ -3295,7 +3319,11 @@ document.addEventListener('DOMContentLoaded', initialiser);
             var c = e.target.closest('.chip'); if (!c) return;
             st.type = c.getAttribute('data-t'); typesSig = ''; drawChips(); drawGrid();
         });
-        qty.addEventListener('input', mark);
+        qty.addEventListener('input', function () {
+            var cur = current();
+            if (cur && qtyVal() > cur.stock) { qty.value = cur.stock > 0 ? cur.stock : ''; toast('Plus que ' + cur.stock + ' en stock'); }
+            mark();
+        });
         if (addBtn) addBtn.addEventListener('click', function () {
             var cur = current(), n = qtyVal();
             setTimeout(function () { if (cur && n > 0 && qty.value === '') { toast('✓ ' + n + ' × ' + cur.nom + ' — ' + eur(n * cur.prix)); mark(); } }, 90);
