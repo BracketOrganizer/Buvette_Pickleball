@@ -332,7 +332,6 @@ body.no-tabs .tabs-nav { display: none; }
 body.no-tabs .nav-bar { padding-bottom: 10px; }
 
 /* ---------- Règles de rôle (inchangées) ---------- */
-.saisie-mode .nav-select option:not([value="ventes"]) { display: none !important; }
 .readonly-mode .section button { opacity: .5; pointer-events: none; }
 .readonly-mode .section input,
 .readonly-mode .section select { opacity: .5; pointer-events: none; }
@@ -690,6 +689,13 @@ body.sheet-open { overflow: hidden; }
 .tile:disabled .tile-name, .tile:disabled .tile-price { color: #8a978f; }
 .readonly-mode .tile:disabled { opacity: 1; }
 
+/* Vendeur : mêmes droits que le visiteur partout, sauf sur la page Ventes */
+.saisie-mode .section:not(#ventes) button,
+.saisie-mode .section:not(#ventes) input,
+.saisie-mode .section:not(#ventes) select { opacity: .5; pointer-events: none; }
+.saisie-mode .section .print-btn,
+.saisie-mode .section .stock-tools input,
+.saisie-mode .section .stock-tools button { opacity: 1 !important; pointer-events: auto !important; }
     </style>
 <script>
 (function(A,d){typeof exports=="object"&&typeof module<"u"?d(exports):typeof define=="function"&&define.amd?define(["exports"],d):(A=typeof globalThis<"u"?globalThis:A||self,d(A.WebWasmBarcodeReader={}))})(this,(function(A){"use strict";const d="barcode-scanner-overlay-styles",b="rgba(0, 0, 0, 0.55)",y="#00ff88",g="#00ff88";function E(){if(document.getElementById(d))return;const h=document.createElement("style");h.id=d,h.textContent=`
@@ -1256,8 +1262,14 @@ async function sauvegarderDonnees() {
     if (isSaving || !db || (!isAdmin && !isSaisie)) return;
     isSaving = true;
     try {
-        trierDonneesParDate();
-        await setDoc(doc(db, "buvette", "data"), data);
+        if (isAdmin) {
+            trierDonneesParDate();
+            await setDoc(doc(db, "buvette", "data"), data);
+        } else {
+            // Vendeur : n'écrit QUE les ventes (les règles Firestore refusent tout autre changement)
+            data.ventes.sort((a, b) => new Date(b.date) - new Date(a.date));
+            await setDoc(doc(db, "buvette", "data"), { ventes: data.ventes }, { merge: true });
+        }
         mettreAJourStatutSauvegarde({ message: '✓ Sauvegardé', classe: '' });
     } catch(e) {
         mettreAJourStatutSauvegarde({ message: '❌ Erreur sauvegarde', classe: 'error' });
@@ -2830,7 +2842,7 @@ async function updateUIForUser(user) {
     if (user) {
         // ── Utilisateur Firebase connecté ──────────────────────────────
         currentUser = user; isVisitor = false;
-        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","bracket.organizer@gmail.com","checheux@gmail.com"];
+        const adminEmails = ["yves.cerisier@orange.fr","quinquin44@gmail.com","checheux@gmail.com"];
         isAdmin = adminEmails.map(normaliserEmail).includes(normaliserEmail(user.email));
 
         if (isAdmin) {
@@ -3130,7 +3142,6 @@ document.addEventListener('DOMContentLoaded', initialiser);
             var visible = 0;
             Array.prototype.forEach.call(nav.children, function (b) {
                 var v = b.getAttribute('data-v'), hide = false;
-                if (saisie && v !== 'ventes') hide = true;
                 if (v === 'utilisateurs' && usersOpt && usersOpt.style.display === 'none') hide = true;
                 b.hidden = hide; if (!hide) visible++;
                 var on = sel.value === v;
